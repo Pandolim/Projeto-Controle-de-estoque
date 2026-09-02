@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Serra - Gestão de Estoque</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-body">
+    
+   <header class="dashboard-header">
+        <h1>Módulo Serra - Controle Operacional</h1>
+        <div>
+            <a href="admin.html" class="btn-primary" style="margin-right: 10px; text-decoration: none;">Voltar ao Painel</a>
+            <a href="login.html" class="btn-sair">Sair</a>
+            <a href="estoque.html" class="btn-primary" style="margin-right: 10px; text-decoration: none; background-color: #8e44ad;">Estoque de Peças</a>
+        </div>
+    </header>
+    </header>
+
+    <main class="dashboard-container">
+        
+        <div class="grid-entradas">
+            
+            <!-- Ação 1: Receber Novo Palete -->
+            <section class="card manual-card">
+                <h2>Entrada de Novo Palete</h2>
+                <form id="formEntrada">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="entID">Identificação do Palete</label>
+                            <input type="text" id="entID" placeholder="Ex: PAL-1042" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="entQtd">Total de Peças</label>
+                            <input type="number" id="entQtd" required min="1" placeholder="Ex: 800">
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="entEsp">Espessura (mm)</label>
+                            <input type="number" id="entEsp" required min="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="entLar">Largura (mm)</label>
+                            <input type="number" id="entLar" required min="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="entCom">Compr (m)</label>
+                            <input type="number" id="entCom" required min="0.1" step="0.1">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Registrar Palete</button>
+                </form>
+            </section>
+
+            <!-- Ação 2: Consumir Peças de um Palete -->
+            <section class="card reader-card">
+                <h2>Registrar Consumo (Baixa)</h2>
+                <p>Informe o ID do palete e quantas peças foram retiradas para a serra.</p>
+                
+                <form id="formConsumo">
+                    <div class="input-group">
+                        <label for="consID">Qual Palete foi aberto?</label>
+                        <input type="text" id="consID" placeholder="Bipe ou digite o ID do palete..." required autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="consQtd">Quantas peças foram retiradas?</label>
+                        <input type="number" id="consQtd" required min="1" placeholder="Ex: 300">
+                    </div>
+                    <button type="submit" class="btn-edit" style="width: 100%; padding: 12px; margin-top: 10px; font-size: 16px;">Confirmar Baixa</button>
+                </form>
+            </section>
+            
+        </div>
+
+        <!-- Estoque: Mostrando paletes individuais -->
+        <section class="card table-card">
+            <h2>Paletes Disponíveis no Pátio/Serra</h2>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>ID do Palete</th>
+                        <th>Dimensões (E x L x C)</th>
+                        <th>Peças Restantes</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPaletes">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+    <!-- Estoque: Mostrando paletes individuais -->
+        <section class="card table-card">
+            <h2>Paletes Disponíveis no Pátio/Serra</h2>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>ID do Palete</th>
+                        <th>Dimensões (E x L x C)</th>
+                        <th>Peças Restantes</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPaletes">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- NOVO: OPs Recebidas do PCP -->
+        <section class="card table-card" style="margin-top: 20px;">
+            <h2>Ordens de Produção (Enviadas pelo PCP)</h2>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>Nº da OP</th>
+                        <th>Linha Destino</th>
+                        <th>Produto</th>
+                        <th>Peças a Cortar</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaOpsSerra">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- NOVO: Pedidos Extras da Produção -->
+        <section class="card table-card" style="margin-top: 20px; border-left: 5px solid #e74c3c;">
+            <h2>Pedidos Extras (Solicitados pelo Estoque)</h2>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>ID Pedido</th>
+                        <th>Peça</th>
+                        <th>Qtd</th>
+                        <th>Motivo / Justificativa</th>
+                        <th>Status</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPedidosExtras">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="main.js"></script>
+</body>
+</html>
+
+    <script src="main.js"></script>
+</body>
+</html>

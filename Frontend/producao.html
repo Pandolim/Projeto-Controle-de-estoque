@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produção - Pedidos Extras</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-body">
+    
+    <header class="dashboard-header">
+        <h1>Solicitação de Peças Extras</h1>
+        <div>
+            <a href="login.html" class="btn-sair">Sair</a>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <section class="card" style="max-width: 600px; margin: 0 auto;">
+            <h2>Nova Solicitação para o Estoque</h2>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">Use este formulário apenas para repor perdas ou faltas de linha.</p>
+            
+            <form id="formPedidoExtra">
+                <div class="input-group">
+                    <label for="extraPeca">Peça Necessária (Dimensões/Nome)</label>
+                    <input type="text" id="extraPeca" required placeholder="Ex: Braço 1300x100x25mm">
+                </div>
+                
+                <div class="input-group">
+                    <label for="extraQtd">Quantidade Adicional</label>
+                    <input type="number" id="extraQtd" required min="1" placeholder="Ex: 5">
+                </div>
+
+                <div class="input-group">
+                    <label for="extraMotivo">Justificativa (Obrigatório)</label>
+                    <textarea id="extraMotivo" required rows="4" placeholder="Explique o motivo do pedido extra. Ex: 3 peças quebraram durante a montagem do lote, 2 vieram com defeito na madeira." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="background-color: #e74c3c; width: 100%;">Enviar Pedido Extra</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="main.js"></script>
+</body>
+</html>

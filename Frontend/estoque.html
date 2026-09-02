@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Estoque e Peças</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-body">
+    
+    <header class="dashboard-header">
+        <h1>Controle de Estoque e Catálogo de Peças</h1>
+        <div>
+            <a href="admin.html" class="btn-primary" style="margin-right: 10px; text-decoration: none; background-color: #34495e;">Voltar ao Painel</a>
+            <a href="login.html" class="btn-sair">Sair</a>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        
+        <!-- ========================================== -->
+        <!-- SESSÃO IMPORTADA DO MÓDULO SERRA           -->
+        <!-- ========================================== -->
+        <div class="grid-entradas" style="margin-bottom: 20px;">
+            
+            <!-- Ação 1: Receber Novo Palete -->
+            <section class="card manual-card">
+                <h2>Entrada de Novo Palete</h2>
+                <form id="formEntrada">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="entID">Identificação do Palete</label>
+                            <input type="text" id="entID" placeholder="Ex: PAL-1042" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="entQtd">Total de Peças</label>
+                            <input type="number" id="entQtd" required min="1" placeholder="Ex: 800">
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="entEsp">Espessura (mm)</label>
+                            <input type="number" id="entEsp" required min="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="entLar">Largura (mm)</label>
+                            <input type="number" id="entLar" required min="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="entCom">Compr (m)</label>
+                            <input type="number" id="entCom" required min="0.1" step="0.1">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Registrar Palete</button>
+                </form>
+            </section>
+
+            <!-- Ação 2: Consumir Peças de um Palete -->
+            <section class="card reader-card">
+                <h2>Registrar Consumo (Baixa)</h2>
+                <p>Informe o ID do palete e quantas peças foram retiradas para a serra.</p>
+                
+                <form id="formConsumo">
+                    <div class="input-group">
+                        <label for="consID">Qual Palete foi aberto?</label>
+                        <input type="text" id="consID" placeholder="Bipe ou digite o ID do palete..." required autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="consQtd">Quantas peças foram retiradas?</label>
+                        <input type="number" id="consQtd" required min="1" placeholder="Ex: 300">
+                    </div>
+                    <button type="submit" class="btn-edit" style="width: 100%; padding: 12px; margin-top: 10px; font-size: 16px;">Confirmar Baixa</button>
+                </form>
+            </section>
+            
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SESSÃO ORIGINAL DO ESTOQUE                 -->
+        <!-- ========================================== -->
+        <div class="grid-entradas">
+            <!-- Coluna 1: Cadastrar Nova Peça com Medidas -->
+            <section class="card">
+                <h2>Cadastrar Nova Peça (Dimensões)</h2>
+                <form id="formCadPeca">
+                    <div class="input-group">
+                        <label for="pecaNome">Nome/Descrição da Peça</label>
+                        <input type="text" id="pecaNome" required placeholder="Ex: Braço Lateral, Travessa...">
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="pecaComprimento">Comprimento (d1 - mm)</label>
+                            <input type="number" id="pecaComprimento" required placeholder="Ex: 1300">
+                        </div>
+                        <div class="input-group">
+                            <label for="pecaLargura">Largura (d2 - mm)</label>
+                            <input type="number" id="pecaLargura" required placeholder="Ex: 100">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="pecaEspessura">Espessura (d3 - mm)</label>
+                        <input type="number" id="pecaEspessura" required value="25">
+                    </div>
+                    <button type="submit" class="btn-primary">Salvar Peça no Catálogo</button>
+                </form>
+            </section>
+
+            <!-- Coluna 2: Ajustar Estoque (Adicionar/Remover) -->
+            <section class="card">
+                <h2>Movimentação de Estoque</h2>
+                <form id="formMovEstoque">
+                    <div class="input-group">
+                        <label for="selectPecaEstoque">Selecionar Peça / Medida</label>
+                        <select id="selectPecaEstoque" required>
+                            <option value="">Carregando peças...</option>
+                        </select>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="movTipo">Tipo de Movimento</label>
+                            <select id="movTipo" required>
+                                <option value="entrada">Adicionar (+)</option>
+                                <option value="saida">Remover (-)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="movQtd">Quantidade</label>
+                            <input type="number" id="movQtd" required min="1" placeholder="Ex: 50">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="background-color: #f39c12;">Atualizar Estoque</button>
+                </form>
+            </section>
+        </div>
+
+        <!-- Tabela Geral de Estoque e Peças Cadastradas -->
+        <section class="card table-card" style="margin-top: 20px;">
+            <h2>Estoque Atual de Peças Cortadas</h2>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>Código / ID</th>
+                        <th>Peça</th>
+                        <th>Dimensões (Comprimento x Largura x Espessura)</th>
+                        <th>Qtd. em Estoque</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaEstoqueGeral">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Tabela de Triagem de Pedidos Extras -->
+        <section class="card table-card" style="margin-top: 20px; border-left: 5px solid #f39c12;">
+            <h2>Triagem de Pedidos da Produção</h2>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>ID Pedido</th>
+                        <th>Peça</th>
+                        <th>Qtd</th>
+                        <th>Justificativa</th>
+                        <th>Status</th>
+                        <th>Ações do Estoque</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaTriagemEstoque">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="main.js"></script>
+</body>
+</html>

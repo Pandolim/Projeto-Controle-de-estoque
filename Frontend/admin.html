@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrador - Gestão de Estoque</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-body">
+    
+    <header class="dashboard-header">
+        <h1>Visão Geral do Sistema</h1>
+        <a href="login.html" class="btn-sair">Sair</a>
+    </header>
+
+    <main class="dashboard-container">
+        <section class="card" style="text-align: center; padding: 40px;">
+            <h2 style="font-size: 28px; margin-bottom: 10px;">Bem-vindo, Kennedy</h2>
+            <p style="color: #7f8c8d; font-size: 16px; margin-bottom: 30px;">Selecione o módulo que deseja acessar para testes:</p>
+            
+            <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                
+                <!-- Botão para o PCP -->
+                <a href="pcp.html" class="btn-primary" style="text-decoration: none; padding: 20px 40px; font-size: 18px; width: auto;">
+                    🛠️ Módulo PCP (Ordens)
+                </a>
+                
+                <!-- Botão para a Serra -->
+                <a href="serra.html" class="btn-primary" style="background-color: #f39c12; text-decoration: none; padding: 20px 40px; font-size: 18px; width: auto;">
+                    🪚 Módulo Serra (Corte)
+                </a>
+
+                <!-- Deixando o botão do Almoxarifado pronto para o futuro -->
+                <a href="almoxarifado.html" class="btn-primary" style="background-color: #34495e; text-decoration: none; padding: 20px 40px; font-size: 18px; width: auto;">
+                    📦 Módulo Almoxarifado
+                </a>
+                <a href="producao.html" class="btn-primary" style="background-color: #e74c3c; text-decoration: none; padding: 20px 40px; font-size: 18px; width: auto; margin-top: 10px;">
+    🏭 Módulo Produção (Pedidos Extras)
+</a>
+                <a href="estoque.html" class="btn-primary" style="background-color: #8e44ad; text-decoration: none; padding: 20px 40px; font-size: 18px; width: auto;">
+    📋 Módulo Estoque e Peças
+</a>
+
+            </div>
+        </section>
+    </main>
+
+    <script src="main.js"></script>
+</body>
+</html>

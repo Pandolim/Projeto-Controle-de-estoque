@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Gestão de Estoque</title>
+    <!-- Aqui conectamos o visual -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-body">
+    
+    <div class="login-container">
+        <h2>Acesso ao Sistema</h2>
+        
+        <form id="formLogin">
+            <div class="input-group">
+                <label for="usuario">Usuário</label>
+                <input type="text" id="usuario" name="usuario" placeholder="Ex: kennedy, pcp, serra ou almoxarifado" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" placeholder="Insira a sua senha" required>
+            </div>
+            
+            <button type="submit" class="btn-login">Entrar</button>
+        </form>
+    </div>
+
+    <!-- Aqui conectamos a lógica -->
+    <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Almoxarifado - Gestão de Estoque</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-body">
+    
+    <header class="dashboard-header">
+        <h1>Módulo Almoxarifado - Gestão e Auditoria</h1>
+        <div>
+            <a href="admin.html" class="btn-primary" style="margin-right: 10px; text-decoration: none;">Voltar ao Painel</a>
+            <a href="login.html" class="btn-sair">Sair</a>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        
+        <!-- Área de Gestão de Matéria-Prima (Pais) -->
+        <section class="card table-card">
+            <h2>Estoque de Matéria-Prima (Paletes Pais)</h2>
+            <p style="color: #7f8c8d; margin-bottom: 15px;">Auditoria de paletes brutos recebidos dos fornecedores.</p>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>ID (Lote)</th>
+                        <th>Material (INS)</th>
+                        <th>Dimensões</th>
+                        <th>Qtd. Peças</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPais">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Área de Gestão de Peças Cortadas (Filhos) e Roteamento -->
+        <section class="card table-card" style="margin-top: 20px;">
+            <h2>Estoque de Peças Cortadas (Paletes Filhos)</h2>
+            <p style="color: #7f8c8d; margin-bottom: 15px;">Ajuste de quantidades e destinação para as linhas de produção (PCP).</p>
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>ID (Corte)</th>
+                        <th>Origem (Pai)</th>
+                        <th>Peça</th>
+                        <th>Qtd. Disponível</th>
+                        <th>Destino (Linha)</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaFilhos">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <script src="main.js"></script>
+</body>
+</html>
