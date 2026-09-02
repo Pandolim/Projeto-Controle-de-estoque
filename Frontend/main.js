@@ -704,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 comprimento: document.getElementById('entCom').value
             };
 
-            fetch('/api/paletes', {
+        fetch('/api/paletes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dadosPalete)
