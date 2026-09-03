@@ -187,46 +187,54 @@
         </section>
 
         <!-- Tabela de Peças Enviadas para a Linha -->
-        <section class="card table-card" style="margin-top: 20px; border-left: 5px solid #2980b9;">
-            <h2>Lançar Peças Enviadas para a Linha</h2>
-            <form id="formPecaLinha" style="margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-                <div class="input-group" style="flex: 1; min-width: 200px;">
-                    <label for="linhaDestinoSelect">Linha de Produção</label>
-                    <select id="linhaDestinoSelect" required>
-                        <option value="Stilo 1.0">Stilo 1.0</option>
-                        <option value="Stilo 2.0">Stilo 2.0</option>
-                        <option value="Stilo 3.0">Stilo 3.0</option>
-                        <option value="Economica">Economica</option>
-                        <option value="Hibrida">Hibrida</option>
-                        <option value="BUX">BUX</option>
-                    </select>
-                </div>
-                <div class="input-group" style="flex: 2; min-width: 250px;">
-                    <label for="pecaEnviadaDesc">Peça / Descrição</label>
-                    <input type="text" id="pecaEnviadaDesc" placeholder="Ex: Caixa Padrão (Mobly)" required>
-                </div>
-                <div class="input-group" style="flex: 1; min-width: 150px;">
-                    <label for="pecaEnviadaQtd">Quantidade</label>
-                    <input type="number" id="pecaEnviadaQtd" required min="1" placeholder="Ex: 50">
-                </div>
-                <button type="submit" class="btn-primary" style="margin: 0; padding: 12px 20px; background-color: #2980b9;">Registrar Envio</button>
-            </form>
+<section class="card table-card" style="margin-top: 20px; border-left: 5px solid #2980b9;">
+    <h2>Lançar Peças Enviadas para a Linha</h2>
+    <form id="formPecaLinha" style="margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="input-group" style="flex: 1; min-width: 200px;">
+            <label for="linhaDestinoSelect">Linha de Produção</label>
+            <select id="linhaDestinoSelect" required>
+                <option value="Stilo 1.0">Stilo 1.0</option>
+                <option value="Stilo 2.0">Stilo 2.0</option>
+                <option value="Stilo 3.0">Stilo 3.0</option>
+                <option value="Economica">Economica</option>
+                <option value="Hibrida">Hibrida</option>
+                <option value="BUX">BUX</option>
+            </select>
+        </div>
+        <div class="input-group" style="flex: 2; min-width: 250px;">
+            <label for="pecaEnviadaDesc">Peça / Descrição</label>
+            <input type="text" id="pecaEnviadaDesc" placeholder="Ex: Caixa Padrão (Mobly)" required>
+        </div>
+        <div class="input-group" style="flex: 1; min-width: 150px;">
+            <label for="pecaEnviadaQtd">Quantidade</label>
+            <input type="number" id="pecaEnviadaQtd" required min="1" placeholder="Ex: 50">
+        </div>
+        <button type="submit" class="btn-primary" style="margin: 0; padding: 12px 20px; background-color: #2980b9;">Registrar Envio</button>
+    </form>
 
-            <table class="estoque-table">
-                <thead>
-                    <tr>
-                        <th>Linha (Observação)</th>
-                        <th>Peça / Descrição</th>
-                        <th>Quantidade</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelaPecasNaLinha">
-                    <!-- Preenchido via JavaScript -->
-                </tbody>
-            </table>
-        </section>
-        
+    <!-- Cabeçalho com Calendário para Filtro -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+        <h3 style="margin: 0;">Relatório de Envios</h3>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <label for="filtroDataLinha" style="margin: 0; font-weight: bold; color: #34495e;">Exibindo dia:</label>
+            <input type="date" id="filtroDataLinha" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+        </div>
+    </div>
+
+    <table class="estoque-table">
+        <thead>
+            <tr>
+                <th>Linha (Observação)</th>
+                <th>Peça / Descrição</th>
+                <th>Quantidade</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaPecasNaLinha">
+            <!-- Preenchido via JavaScript -->
+        </tbody>
+    </table>
+</section>
     </main>
 
     <script src="main.js"></script>

@@ -4,7 +4,7 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Backend.models import engine, PaletePai
+from Backend.models import engine, PaletePai, EstoquePeca
 
 app = Flask(__name__)
 
@@ -41,6 +41,73 @@ def registrar_palete():
     
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 400
+
+@app.route('/api/pecas', methods=['GET'])
+def listar_pecas():
+    try:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        pecas = session.query(EstoquePeca).all()
+        lista = [{"id": p.id_peca, "nome": p.nome, "d1": p.comprimento_d1, "d2": p.largura_d2, "d3": p.espessura_d3, "estoqueDestino": p.estoque_destino, "qtd": p.quantidade} for p in pecas]
+        session.close()
+        return jsonify(lista), 200
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 400
+
+@app.route('/api/pecas', methods=['POST'])
+def cadastrar_peca():
+    try:
+        dados = request.json
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        nova_peca = EstoquePeca(
+            id_peca=dados['id'], nome=dados['nome'], comprimento_d1=dados['d1'],
+            largura_d2=dados['d2'], espessura_d3=dados['d3'],
+            estoque_destino=dados['estoqueDestino'], quantidade=dados['qtd']
+        )
+        session.add(nova_peca)
+        session.commit()
+        session.close()
+        return jsonify({"status": "sucesso"}), 201
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 400
+
+@app.route('/api/pecas/movimentar', methods=['POST'])
+def movimentar_peca():
+    try:
+        dados = request.json
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        peca = session.query(EstoquePeca).filter_by(id_peca=dados['id']).first()
+        if not peca:
+            return jsonify({"erro": "Peça não encontrada"}), 404
+        
+        if dados['tipo'] == 'entrada':
+            peca.quantidade += int(dados['quantidade'])
+        else:
+            if int(dados['quantidade']) > peca.quantidade:
+                return jsonify({"erro": "Estoque insuficiente"}), 400
+            peca.quantidade -= int(dados['quantidade'])
+        
+        session.commit()
+        session.close()
+        return jsonify({"status": "sucesso"}), 200
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 400
+
+@app.route('/api/pecas/<id_peca>', methods=['DELETE'])
+def deletar_peca(id_peca):
+    try:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        peca = session.query(EstoquePeca).filter_by(id_peca=id_peca).first()
+        if peca:
+            session.delete(peca)
+            session.commit()
+        session.close()
+        return jsonify({"status": "sucesso"}), 200
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 400
 
 if __name__ == '__main__':
     app.run()

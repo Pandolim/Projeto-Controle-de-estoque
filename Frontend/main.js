@@ -227,17 +227,17 @@ if (formOP && tabsLinhas) {
 }
 
 // ==========================================
-// LÓGICA DO MÓDULO DE ESTOQUE E PEÇAS
+// LÓGICA DO MÓDULO DE ESTOQUE E PEÇAS (SUPABASE)
 // ==========================================
 const formCadPeca = document.getElementById('formCadPeca');
 const formMovEstoque = document.getElementById('formMovEstoque');
 const tabelaEstoqueGeral = document.getElementById('tabelaEstoqueGeral');
 const selectPecaEstoque = document.getElementById('selectPecaEstoque');
 
-let catalogoPecas = JSON.parse(localStorage.getItem('catalogo_pecas_est')) || [];
+let catalogoPecas = [];
 
 if (tabelaEstoqueGeral || formCadPeca) {
-    renderizarEstoque();
+    carregarEstoqueDoBanco();
 
     if (formCadPeca) {
         formCadPeca.addEventListener('submit', function(event) {
@@ -248,69 +248,91 @@ if (tabelaEstoqueGeral || formCadPeca) {
                 d1: parseInt(document.getElementById('pecaComprimento').value),
                 d2: parseInt(document.getElementById('pecaLargura').value),
                 d3: parseInt(document.getElementById('pecaEspessura').value),
-                estoqueDestino: document.getElementById('pecaEstoqueDestino').value, // Lidiane ou Mobly
+                estoqueDestino: document.getElementById('pecaEstoqueDestino').value,
                 qtd: 0 
             };
-            catalogoPecas.push(novaPeca);
-            localStorage.setItem('catalogo_pecas_est', JSON.stringify(catalogoPecas));
-            renderizarEstoque();
-            formCadPeca.reset();
-            alert(`Sucesso! Peça ${novaPeca.nome} (${novaPeca.estoqueDestino}) cadastrada.`);
+            
+            fetch('/api/pecas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(novaPeca)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'sucesso') {
+                    alert(`Sucesso! Peça ${novaPeca.nome} (${novaPeca.estoqueDestino}) salva no banco de dados.`);
+                    formCadPeca.reset();
+                    carregarEstoqueDoBanco();
+                } else alert('Erro: ' + data.erro);
+            });
         });
     }
 
     if (formMovEstoque) {
         formMovEstoque.addEventListener('submit', function(event) {
             event.preventDefault();
-            const idPeca = selectPecaEstoque.value;
-            const tipo = document.getElementById('movTipo').value;
-            const quantidade = parseInt(document.getElementById('movQtd').value);
-            const peca = catalogoPecas.find(p => p.id === idPeca);
-            if (!peca) return;
+            const payload = {
+                id: selectPecaEstoque.value,
+                tipo: document.getElementById('movTipo').value,
+                quantidade: parseInt(document.getElementById('movQtd').value)
+            };
 
-            if (tipo === 'entrada') peca.qtd += quantidade;
-            else {
-                if (quantidade > peca.qtd) { alert(`Estoque insuficiente! Há apenas ${peca.qtd} disponíveis.`); return; }
-                peca.qtd -= quantidade;
-            }
-            localStorage.setItem('catalogo_pecas_est', JSON.stringify(catalogoPecas));
-            renderizarEstoque();
-            formMovEstoque.reset();
-            alert(`Estoque atualizado com sucesso!`);
+            fetch('/api/pecas/movimentar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'sucesso') {
+                    alert(`Estoque atualizado com sucesso no banco!`);
+                    formMovEstoque.reset();
+                    carregarEstoqueDoBanco();
+                } else alert('Erro: ' + data.erro);
+            });
         });
     }
 }
 
-function renderizarEstoque() {
+function carregarEstoqueDoBanco() {
     if (!tabelaEstoqueGeral) return;
-    tabelaEstoqueGeral.innerHTML = '';
-    selectPecaEstoque.innerHTML = '<option value="">Selecione uma peça...</option>';
+    fetch('/api/pecas')
+    .then(res => res.json())
+    .then(pecas => {
+        catalogoPecas = pecas;
+        tabelaEstoqueGeral.innerHTML = '';
+        selectPecaEstoque.innerHTML = '<option value="">Selecione uma peça...</option>';
 
-    catalogoPecas.forEach((peca, index) => {
-        const dest = peca.estoqueDestino || 'N/A';
-        const destColor = dest === 'Lidiane' ? '#8e44ad' : '#e67e22'; // Cores para diferenciar
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><strong>${peca.id}</strong><br><span style="font-size:11px; background:${destColor}; color:#fff; padding:2px 4px; border-radius:3px;">${dest}</span></td>
-            <td>${peca.nome}</td>
-            <td>${peca.d1}mm x ${peca.d2}mm x ${peca.d3}mm</td>
-            <td><strong style="font-size: 16px; color: ${peca.qtd > 0 ? '#2ecc71' : '#e74c3c'};">${peca.qtd}</strong></td>
-            <td><button class="btn-edit" onclick="removerPecaCatalogo(${index})" style="background-color: #e74c3c;">Excluir</button></td>
-        `;
-        tabelaEstoqueGeral.appendChild(tr);
+        pecas.forEach((peca) => {
+            const dest = peca.estoqueDestino || 'N/A';
+            const destColor = dest === 'Lidiane' ? '#8e44ad' : '#e67e22'; 
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${peca.id}</strong><br><span style="font-size:11px; background:${destColor}; color:#fff; padding:2px 4px; border-radius:3px;">${dest}</span></td>
+                <td>${peca.nome}</td>
+                <td>${peca.d1}mm x ${peca.d2}mm x ${peca.d3}mm</td>
+                <td><strong style="font-size: 16px; color: ${peca.qtd > 0 ? '#2ecc71' : '#e74c3c'};">${peca.qtd}</strong></td>
+                <td><button class="btn-edit" onclick="removerPecaCatalogo('${peca.id}')" style="background-color: #e74c3c;">Excluir</button></td>
+            `;
+            tabelaEstoqueGeral.appendChild(tr);
 
-        const opt = document.createElement('option');
-        opt.value = peca.id;
-        opt.textContent = `${peca.nome} (${dest}) - Saldo: ${peca.qtd}`;
-        selectPecaEstoque.appendChild(opt);
-    });
+            const opt = document.createElement('option');
+            opt.value = peca.id;
+            opt.textContent = `${peca.nome} (${dest}) - Saldo: ${peca.qtd}`;
+            selectPecaEstoque.appendChild(opt);
+        });
+    })
+    .catch(err => console.error("Erro ao buscar peças:", err));
 }
-window.removerPecaCatalogo = function(index) {
-    if (confirm(`Deseja apagar a peça ${catalogoPecas[index].nome}?`)) {
-        catalogoPecas.splice(index, 1);
-        localStorage.setItem('catalogo_pecas_est', JSON.stringify(catalogoPecas));
-        renderizarEstoque();
+
+window.removerPecaCatalogo = function(id_peca) {
+    if (confirm(`Deseja apagar esta peça permanentemente do banco de dados?`)) {
+        fetch(`/api/pecas/${id_peca}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'sucesso') carregarEstoqueDoBanco();
+        });
     }
 };
 
@@ -382,25 +404,47 @@ if (tabelaPedidosExtras) {
 }
 
 // ==========================================
-// LÓGICA DE PEÇAS ENVIADAS PARA A LINHA
+// LÓGICA DE PEÇAS ENVIADAS PARA A LINHA COM FILTRO DE DATA
 // ==========================================
 const formPecaLinha = document.getElementById('formPecaLinha');
 const tabelaPecasNaLinha = document.getElementById('tabelaPecasNaLinha');
+const filtroDataLinha = document.getElementById('filtroDataLinha');
 let listaPecasNaLinha = JSON.parse(localStorage.getItem('pecas_na_linha_salvas')) || [];
 
-if (formPecaLinha && tabelaPecasNaLinha) {
+// Função utilitária para pegar a data atual no fuso local (Formato YYYY-MM-DD)
+function obterDataLocalISO() {
+    const hoje = new Date();
+    const offset = hoje.getTimezoneOffset() * 60000;
+    return new Date(hoje.getTime() - offset).toISOString().split('T')[0];
+}
+
+if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
+    
+    // Define o calendário para o dia atual assim que a página carrega
+    filtroDataLinha.value = obterDataLocalISO();
+    
+    // Recarrega a tabela sempre que o usuário mudar a data no calendário
+    filtroDataLinha.addEventListener('change', renderizarPecasNaLinha);
+
     renderizarPecasNaLinha();
 
     formPecaLinha.addEventListener('submit', function(e) {
         e.preventDefault();
+        
         const novoEnvio = {
             id: Date.now(),
+            data_envio: obterDataLocalISO(), // Salva a data real do lançamento
             linha: document.getElementById('linhaDestinoSelect').value,
             peca: document.getElementById('pecaEnviadaDesc').value.trim(),
             quantidade: parseInt(document.getElementById('pecaEnviadaQtd').value)
         };
+        
         listaPecasNaLinha.unshift(novoEnvio);
         localStorage.setItem('pecas_na_linha_salvas', JSON.stringify(listaPecasNaLinha));
+        
+        // Se o usuário estiver vendo um dia antigo, volta o calendário para "hoje" ao fazer um novo lançamento
+        filtroDataLinha.value = obterDataLocalISO();
+        
         renderizarPecasNaLinha();
         formPecaLinha.reset();
         alert('✅ Peça lançada como enviada para a linha com sucesso!');
@@ -410,21 +454,36 @@ if (formPecaLinha && tabelaPecasNaLinha) {
 function renderizarPecasNaLinha() {
     if (!tabelaPecasNaLinha) return;
     tabelaPecasNaLinha.innerHTML = '';
-    if (listaPecasNaLinha.length === 0) {
-        tabelaPecasNaLinha.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhuma peça lançada na linha.</td></tr>';
+    
+    const dataSelecionada = filtroDataLinha.value;
+    
+    // Filtra a lista para exibir apenas os itens com a data selecionada
+    const listaFiltrada = listaPecasNaLinha.filter(item => {
+        // Fallback: se o item for antigo (dos testes anteriores) e não tiver data_envio, não quebra
+        const dataItem = item.data_envio || new Date(item.id).toISOString().split('T')[0];
+        return dataItem === dataSelecionada;
+    });
+
+    if (listaFiltrada.length === 0) {
+        const dataFormatada = dataSelecionada.split('-').reverse().join('/');
+        tabelaPecasNaLinha.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #7f8c8d;">Nenhum envio registrado para o dia ${dataFormatada}.</td></tr>`;
         return;
     }
-    listaPecasNaLinha.forEach((item, index) => {
+    
+    listaFiltrada.forEach((item) => {
+        // Encontra o índice real no array original para permitir a remoção correta
+        const realIndex = listaPecasNaLinha.findIndex(p => p.id === item.id);
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><span style="background: #eef2f3; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${item.linha}</span></td>
             <td>${item.peca}</td>
             <td><strong style="color: #27ae60; font-size: 16px;">${item.quantidade}</strong></td>
-            <td><button class="btn-edit" style="background-color: #e74c3c; padding: 6px 12px;" onclick="removerPecaLinha(${index})">Remover</button></td>
+            <td><button class="btn-edit" style="background-color: #e74c3c; padding: 6px 12px;" onclick="removerPecaLinha(${realIndex})">Remover</button></td>
         `;
         tabelaPecasNaLinha.appendChild(tr);
     });
 }
+
 window.removerPecaLinha = function(index) {
     if (confirm("Deseja realmente remover este registro de envio para a linha?")) {
         listaPecasNaLinha.splice(index, 1);
