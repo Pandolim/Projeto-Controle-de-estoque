@@ -112,5 +112,12 @@ def deletar_peca(id_peca):
     except Exception as e:
         return jsonify({"erro": str(e)}), 400
 
+# ==========================================
+# ROTA DE TESTE (DIAGNÓSTICO)
+# ==========================================
+@app.route('/api/ping', methods=['GET'])
+def ping():
+    return jsonify({"status": "ok", "mensagem": "A API PYTHON ESTÁ VIVA E NA NUVEM!"}), 200
+
 if __name__ == '__main__':
     app.run()
