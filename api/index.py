@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify
 from sqlalchemy.orm import sessionmaker
-import sys
-import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Backend.models import engine, PaletePai, EstoquePeca
+# Importação direta e nativa, pois o models.py agora está na pasta api!
+from models import engine, PaletePai, EstoquePeca
 
 app = Flask(__name__)
 
@@ -19,8 +17,7 @@ def registrar_palete():
         quantidade = int(dados.get('quantidade')) if dados.get('quantidade') else 0
         espessura = int(dados.get('espessura')) if dados.get('espessura') else 0
         largura = int(dados.get('largura')) if dados.get('largura') else 0
-        comprimento_val = dados.get('comprimento')
-        comprimento = int(float(comprimento_val) * 1000) if comprimento_val else 0
+        comprimento = int(float(dados.get('comprimento')) * 1000) if dados.get('comprimento') else 0
         estoque_destino = dados.get('estoqueDestino', 'Lidiane')
         
         Session = sessionmaker(bind=engine)
