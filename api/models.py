@@ -102,6 +102,3 @@ DATABASE_URL = "postgresql://postgres.wybtpfasrzthorkomlsd:Pandolim17k@aws-0-sa-
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
-# Cria todas as tabelas na nuvem (incluindo EstoqueRetalhos)
-Base.metadata.create_all(engine)
-print("✅ Tabelas criadas com sucesso no Supabase usando rede IPv4!")
