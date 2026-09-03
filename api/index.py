@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from sqlalchemy.orm import sessionmaker
 
 # Importação direta e nativa, pois o models.py agora está na pasta api!
-from models import engine, PaletePai, EstoquePeca
+from api.models import engine, PaletePai, EstoquePeca
 
 app = Flask(__name__)
 
