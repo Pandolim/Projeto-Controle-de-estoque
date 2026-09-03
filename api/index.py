@@ -85,3 +85,4 @@ from sqlalchemy import create_engine
 DATABASE_URL = "postgresql://postgres.wybtpfasrzthorkomlsd:Pandolim17k@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+#comentario teste
