@@ -3,7 +3,6 @@ from sqlalchemy.orm import sessionmaker
 import sys
 import os
 
-# Aponta para a pasta onde está o seu models.py
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Backend.models import engine, PaletePai
 
@@ -13,12 +12,15 @@ app = Flask(__name__)
 def registrar_palete():
     try:
         dados = request.json
-        id_palete = dados.get('id_palete')
-        quantidade = int(dados.get('quantidade'))
-        espessura = int(dados.get('espessura'))
-        largura = int(dados.get('largura'))
-        # Converte o comprimento de metros (ex: 2.5) para milímetros (2500)
-        comprimento = int(float(dados.get('comprimento')) * 1000)
+        id_palete = dados.get('id_palete', '')
+        quantidade = int(dados.get('quantidade')) if dados.get('quantidade') else 0
+        espessura = int(dados.get('espessura')) if dados.get('espessura') else 0
+        largura = int(dados.get('largura')) if dados.get('largura') else 0
+        comprimento_val = dados.get('comprimento')
+        comprimento = int(float(comprimento_val) * 1000) if comprimento_val else 0
+        
+        # Captura o destino do estoque (Lidiane/Mobly)
+        estoque_destino = dados.get('estoqueDestino', 'Lidiane')
         
         Session = sessionmaker(bind=engine)
         session = Session()
@@ -28,17 +30,17 @@ def registrar_palete():
             comprimento_d1=comprimento,
             largura_d2=largura,
             espessura_d3=espessura,
-            quantidade_tabuas=quantidade
+            quantidade_tabuas=quantidade,
+            estoque_destino=estoque_destino
         )
         session.add(novo_lote)
         session.commit()
         session.close()
         
-        return jsonify({"status": "sucesso", "mensagem": "Palete registrado no pátio!"}), 201
+        return jsonify({"status": "sucesso", "mensagem": "Palete registrado no pátio com sucesso!"}), 201
     
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 400
 
-# Exigência da Vercel para rodar o Flask
 if __name__ == '__main__':
     app.run()

@@ -47,6 +47,9 @@ class PaletePai(Base):
     espessura_d3 = Column(Integer, default=25)
     quantidade_tabuas = Column(Integer, nullable=False)
     
+    # NOVA COLUNA: Define se pertence à Lidiane ou Mobly
+    estoque_destino = Column(String(50), default='Lidiane') 
+    
     status = Column(String, default='No Pátio') # 'No Pátio', 'Na Serra', 'Finalizado'
     data_entrada = Column(DateTime, default=datetime.utcnow)
 

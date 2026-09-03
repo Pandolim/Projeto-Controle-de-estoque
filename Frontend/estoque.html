@@ -50,6 +50,13 @@
                             <label for="entCom">Compr (m)</label>
                             <input type="number" id="entCom" required min="0.1" step="0.1">
                         </div>
+                        <div class="input-group">
+    <label for="estoqueDestino">Estoque de Destino:</label>
+    <select id="estoqueDestino" required>
+        <option value="Lidiane">Estoque Lidiane</option>
+        <option value="Mobly">Mobly</option>
+    </select>
+</div>
                     </div>
                     <button type="submit" class="btn-primary">Registrar Palete</button>
                 </form>
@@ -101,6 +108,13 @@
                         <label for="pecaEspessura">Espessura (d3 - mm)</label>
                         <input type="number" id="pecaEspessura" required value="25">
                     </div>
+                    <div class="input-group">
+    <label for="pecaEstoqueDestino">Estoque de Destino:</label>
+    <select id="pecaEstoqueDestino" required>
+        <option value="Lidiane">Estoque Lidiane</option>
+        <option value="Mobly">Mobly</option>
+    </select>
+</div>
                     <button type="submit" class="btn-primary">Salvar Peça no Catálogo</button>
                 </form>
             </section>
@@ -171,6 +185,48 @@
                 </tbody>
             </table>
         </section>
+
+        <!-- Tabela de Peças Enviadas para a Linha -->
+        <section class="card table-card" style="margin-top: 20px; border-left: 5px solid #2980b9;">
+            <h2>Lançar Peças Enviadas para a Linha</h2>
+            <form id="formPecaLinha" style="margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div class="input-group" style="flex: 1; min-width: 200px;">
+                    <label for="linhaDestinoSelect">Linha de Produção</label>
+                    <select id="linhaDestinoSelect" required>
+                        <option value="Stilo 1.0">Stilo 1.0</option>
+                        <option value="Stilo 2.0">Stilo 2.0</option>
+                        <option value="Stilo 3.0">Stilo 3.0</option>
+                        <option value="Economica">Economica</option>
+                        <option value="Hibrida">Hibrida</option>
+                        <option value="BUX">BUX</option>
+                    </select>
+                </div>
+                <div class="input-group" style="flex: 2; min-width: 250px;">
+                    <label for="pecaEnviadaDesc">Peça / Descrição</label>
+                    <input type="text" id="pecaEnviadaDesc" placeholder="Ex: Caixa Padrão (Mobly)" required>
+                </div>
+                <div class="input-group" style="flex: 1; min-width: 150px;">
+                    <label for="pecaEnviadaQtd">Quantidade</label>
+                    <input type="number" id="pecaEnviadaQtd" required min="1" placeholder="Ex: 50">
+                </div>
+                <button type="submit" class="btn-primary" style="margin: 0; padding: 12px 20px; background-color: #2980b9;">Registrar Envio</button>
+            </form>
+
+            <table class="estoque-table">
+                <thead>
+                    <tr>
+                        <th>Linha (Observação)</th>
+                        <th>Peça / Descrição</th>
+                        <th>Quantidade</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPecasNaLinha">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </section>
+        
     </main>
 
     <script src="main.js"></script>
