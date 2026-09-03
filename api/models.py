@@ -53,6 +53,19 @@ class PaletePai(Base):
     status = Column(String, default='No Pátio') # 'No Pátio', 'Na Serra', 'Finalizado'
     data_entrada = Column(DateTime, default=datetime.utcnow)
 
+
+class EstoquePeca(Base):
+    __tablename__ = 'estoque_pecas'
+
+    id_peca = Column(String, primary_key=True)
+    nome = Column(String, nullable=False)
+    comprimento_d1 = Column(Integer, nullable=False)
+    largura_d2 = Column(Integer, nullable=False)
+    espessura_d3 = Column(Integer, default=25)
+    estoque_destino = Column(String(50), default='Lidiane')
+    quantidade = Column(Integer, default=0)
+
+
 class OrdemProducao(Base):
     """As OPs geradas pelo PCP para o dia."""
     __tablename__ = 'ordens_producao'
