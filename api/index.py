@@ -8,6 +8,9 @@ from Backend.models import engine, PaletePai, EstoquePeca
 
 app = Flask(__name__)
 
+# ==========================================
+# ROTA 1: PALETES (ENTRADA)
+# ==========================================
 @app.route('/api/paletes', methods=['POST'])
 def registrar_palete():
     try:
@@ -18,8 +21,6 @@ def registrar_palete():
         largura = int(dados.get('largura')) if dados.get('largura') else 0
         comprimento_val = dados.get('comprimento')
         comprimento = int(float(comprimento_val) * 1000) if comprimento_val else 0
-        
-        # Captura o destino do estoque (Lidiane/Mobly)
         estoque_destino = dados.get('estoqueDestino', 'Lidiane')
         
         Session = sessionmaker(bind=engine)
@@ -36,12 +37,13 @@ def registrar_palete():
         session.add(novo_lote)
         session.commit()
         session.close()
-        
         return jsonify({"status": "sucesso", "mensagem": "Palete registrado no pátio com sucesso!"}), 201
-    
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 400
 
+# ==========================================
+# ROTAS 2: CATÁLOGO E ESTOQUE DE PEÇAS
+# ==========================================
 @app.route('/api/pecas', methods=['GET'])
 def listar_pecas():
     try:
@@ -61,9 +63,13 @@ def cadastrar_peca():
         Session = sessionmaker(bind=engine)
         session = Session()
         nova_peca = EstoquePeca(
-            id_peca=dados['id'], nome=dados['nome'], comprimento_d1=dados['d1'],
-            largura_d2=dados['d2'], espessura_d3=dados['d3'],
-            estoque_destino=dados['estoqueDestino'], quantidade=dados['qtd']
+            id_peca=dados['id'], 
+            nome=dados['nome'], 
+            comprimento_d1=dados['d1'],
+            largura_d2=dados['d2'], 
+            espessura_d3=dados['d3'],
+            estoque_destino=dados['estoqueDestino'], 
+            quantidade=dados['qtd']
         )
         session.add(nova_peca)
         session.commit()
