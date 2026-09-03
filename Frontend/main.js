@@ -403,13 +403,34 @@ if (tabelaPedidosExtras) {
     };
 }
 
-formPecaLinha.addEventListener('submit', async function(e) {
+// ==========================================
+// LÓGICA DE PEÇAS ENVIADAS PARA A LINHA COM FILTRO DE DATA
+// ==========================================
+const formPecaLinha = document.getElementById('formPecaLinha');
+const tabelaPecasNaLinha = document.getElementById('tabelaPecasNaLinha');
+const filtroDataLinha = document.getElementById('filtroDataLinha');
+let listaPecasNaLinha = JSON.parse(localStorage.getItem('pecas_na_linha_salvas')) || [];
+
+function obterDataLocalISO() {
+    const hoje = new Date();
+    const offset = hoje.getTimezoneOffset() * 60000;
+    return new Date(hoje.getTime() - offset).toISOString().split('T')[0];
+}
+
+if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
+    
+    filtroDataLinha.value = obterDataLocalISO();
+    filtroDataLinha.addEventListener('change', renderizarPecasNaLinha);
+    renderizarPecasNaLinha();
+
+    formPecaLinha.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const select = document.getElementById('selectPecaLinha');
         const idPeca = select.value;
         const qtdStr = document.getElementById('pecaEnviadaQtd').value;
         const linha = document.getElementById('linhaDestinoSelect').value;
+        const btnSubmit = e.target.querySelector('button[type="submit"]'); 
         
         if (!idPeca || !qtdStr || !linha) {
             alert("Por favor, selecione uma peça válida no estoque.");
@@ -419,20 +440,22 @@ formPecaLinha.addEventListener('submit', async function(e) {
         const qtd = parseInt(qtdStr);
         const nomePeca = select.options[select.selectedIndex].dataset.nome;
 
+        // Trava o botão contra cliques duplos
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "Processando...";
+
         try {
-            // 1. Envia o comando de SAÍDA para a API (Supabase)
             const response = await fetch('/api/pecas/movimentar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: idPeca,
-                    tipo: 'saida', // Avisa o Python que é para subtrair
+                    tipo: 'saida',
                     quantidade: qtd
                 })
             });
 
             if (response.ok) {
-                // 2. A API confirmou que tinha saldo e já deu baixa. Agora salvamos no relatório da tela.
                 const novoEnvio = {
                     id: Date.now(),
                     data_envio: obterDataLocalISO(),
@@ -448,30 +471,32 @@ formPecaLinha.addEventListener('submit', async function(e) {
                 renderizarPecasNaLinha();
                 formPecaLinha.reset();
                 
-                alert(`✅ Sucesso! ${qtd} unidades de ${nomePeca} enviadas para a linha ${linha}. O saldo no estoque foi atualizado.`);
+                alert(`✅ Sucesso! ${qtd} unidades de ${nomePeca} enviadas para a linha ${linha}.`);
                 
-                // 3. Atualiza os saldos nas tabelas e no dropdown
                 carregarDropdownLinha();
                 carregarEstoqueDoBanco(); 
             } else {
-                // O servidor recusou porque o operador tentou enviar mais do que tem no saldo
                 const erro = await response.json();
                 alert("❌ Operação negada pelo sistema: " + erro.erro);
             }
         } catch (error) {
             console.error("Erro na comunicação:", error);
             alert("Erro ao comunicar com o servidor. Verifique sua internet.");
+        } finally {
+            // Libera o botão novamente
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = "Registrar Envio";
         }
     });
+}
+
 function renderizarPecasNaLinha() {
     if (!tabelaPecasNaLinha) return;
     tabelaPecasNaLinha.innerHTML = '';
     
     const dataSelecionada = filtroDataLinha.value;
     
-    // Filtra a lista para exibir apenas os itens com a data selecionada
     const listaFiltrada = listaPecasNaLinha.filter(item => {
-        // Fallback: se o item for antigo (dos testes anteriores) e não tiver data_envio, não quebra
         const dataItem = item.data_envio || new Date(item.id).toISOString().split('T')[0];
         return dataItem === dataSelecionada;
     });
@@ -483,7 +508,6 @@ function renderizarPecasNaLinha() {
     }
     
     listaFiltrada.forEach((item) => {
-        // Encontra o índice real no array original para permitir a remoção correta
         const realIndex = listaPecasNaLinha.findIndex(p => p.id === item.id);
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -503,10 +527,10 @@ window.removerPecaLinha = function(index) {
         renderizarPecasNaLinha();
     }
 };
-// Função para carregar as peças disponíveis no dropdown de envio para a linha
+
 async function carregarDropdownLinha() {
     const select = document.getElementById('selectPecaLinha');
-    if (!select) return; // Evita erro se não estiver na página certa
+    if (!select) return; 
 
     try {
         const response = await fetch('/api/pecas');
@@ -515,13 +539,10 @@ async function carregarDropdownLinha() {
         select.innerHTML = '<option value="">Selecione uma peça...</option>';
 
         pecas.forEach(p => {
-            // Só exibe peças que tem saldo maior que zero (opcional)
             if (p.qtd > 0) {
                 const option = document.createElement('option');
-                option.value = p.id; // O ID real da peça no banco
-                // Exibe o nome e o saldo atual para facilitar a escolha
+                option.value = p.id;
                 option.textContent = `${p.nome} - Saldo: ${p.qtd} un.`; 
-                // Guarda o nome no dataset para usarmos no relatório visual depois
                 option.dataset.nome = p.nome; 
                 select.appendChild(option);
             }
@@ -532,5 +553,4 @@ async function carregarDropdownLinha() {
     }
 }
 
-// Chame a função quando o script iniciar
 carregarDropdownLinha();
