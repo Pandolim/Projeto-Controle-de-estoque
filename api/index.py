@@ -82,7 +82,6 @@ import os
 from sqlalchemy import create_engine
 
 # URL construída com o Transaction Pooler (porta 6543)
-DATABASE_URL = "postgresql://postgres.wybtpfasrzthorkomlsd:Pandolim17k@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
-
+DATABASE_URL = "postgresql+pg8000://postgres.wybtpfasrzthorkomlsd:Pandolim17k@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 #comentario teste
