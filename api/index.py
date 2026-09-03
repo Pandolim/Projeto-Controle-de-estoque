@@ -1,10 +1,16 @@
 from flask import Flask, request, jsonify
 from sqlalchemy.orm import sessionmaker
+import sys
+import os
 
-# Importação direta e nativa, pois o models.py agora está na pasta api!
+# FORÇA a Vercel a olhar para a pasta 'api' (onde este arquivo está) para achar o models.py
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from models import engine, PaletePai, EstoquePeca
 
 app = Flask(__name__)
+
+# ... (MANTENHA TODO O RESTO DO CÓDIGO INTACTO ABAIXO DISSO) ...
 
 # ==========================================
 # ROTA 1: PALETES (ENTRADA)
