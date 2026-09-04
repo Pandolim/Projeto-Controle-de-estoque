@@ -25,15 +25,13 @@ const formEntrada = document.getElementById('formEntrada');
 const formConsumo = document.getElementById('formConsumo');
 const tabelaPaletes = document.getElementById('tabelaPaletes');
 
-// Array simulado para consumo na serra (pode ser substituído por API no futuro)
 let estoquePaletes = [
     { id: 'PAL-001', espessura: 25, largura: 150, comprimento: 3.0, pecas: 800 }
 ];
 
 if (formEntrada) {
-    // 1. Lógica OFICIAL para Registrar Novo Palete no Banco de Dados (API)
     formEntrada.addEventListener('submit', function(event) {
-        event.preventDefault(); // Impede a página de recarregar
+        event.preventDefault(); 
         
         const dadosPalete = {
             id_palete: document.getElementById('entID').value.trim().toUpperCase(),
@@ -54,7 +52,6 @@ if (formEntrada) {
             if (data.status === 'sucesso') {
                 alert('✅ ' + data.mensagem);
                 formEntrada.reset(); 
-                // Se estiver na tela da serra, atualiza visualmente a simulação também
                 if (tabelaPaletes) {
                     estoquePaletes.push({ id: dadosPalete.id_palete, espessura: dadosPalete.espessura, largura: dadosPalete.largura, comprimento: dadosPalete.comprimento, pecas: dadosPalete.quantidade });
                     renderizarTabela();
@@ -72,7 +69,6 @@ if (formEntrada) {
 
 if (formConsumo) {
     renderizarTabela();
-    // 2. Lógica para Consumir Peças
     formConsumo.addEventListener('submit', function(event) {
         event.preventDefault();
         const idBusca = document.getElementById('consID').value.trim().toUpperCase();
@@ -322,6 +318,12 @@ function carregarEstoqueDoBanco() {
             opt.textContent = `${peca.nome} (${dest}) - Saldo: ${peca.qtd}`;
             selectPecaEstoque.appendChild(opt);
         });
+
+        // ATIVA A BARRA DE PESQUISA (Select2)
+        if(typeof $ !== 'undefined') {
+            $('#selectPecaEstoque').select2();
+        }
+
     })
     .catch(err => console.error("Erro ao buscar peças:", err));
 }
@@ -438,7 +440,9 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
         }
 
         const qtd = parseInt(qtdStr);
-        const nomePeca = select.options[select.selectedIndex].dataset.nome;
+        // O Select2 muda a forma de acessar a option, então garantimos pegar a correta:
+        const optionSelecionada = select.options[select.selectedIndex];
+        const nomePeca = optionSelecionada ? optionSelecionada.dataset.nome : "";
 
         // Trava o botão contra cliques duplos
         btnSubmit.disabled = true;
@@ -470,6 +474,9 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
                 filtroDataLinha.value = obterDataLocalISO();
                 renderizarPecasNaLinha();
                 formPecaLinha.reset();
+                
+                // Limpa o visual do Select2 após o reset do form
+                if(typeof $ !== 'undefined') $('#selectPecaLinha').val(null).trigger('change');
                 
                 alert(`✅ Sucesso! ${qtd} unidades de ${nomePeca} enviadas para a linha ${linha}.`);
                 
@@ -547,11 +554,18 @@ async function carregarDropdownLinha() {
                 select.appendChild(option);
             }
         });
+
+        // ATIVA A BARRA DE PESQUISA (Select2)
+        if(typeof $ !== 'undefined') {
+            $('#selectPecaLinha').select2();
+        }
+
     } catch (error) {
         console.error("Erro ao carregar peças para o envio:", error);
         select.innerHTML = '<option value="">Erro ao carregar estoque</option>';
     }
 }
+
 // ==========================================
 // LÓGICA DE EXPORTAÇÃO PARA EXCEL (.xlsx) - MÚLTIPLAS ABAS
 // ==========================================
@@ -560,18 +574,14 @@ const btnExportarExcel = document.getElementById('btnExportarExcel');
 if (btnExportarExcel) {
     btnExportarExcel.addEventListener('click', async function() {
         try {
-            // Trava o botão para evitar cliques múltiplos
             btnExportarExcel.textContent = "⏳ Gerando Relatório...";
             btnExportarExcel.disabled = true;
 
-            // 1. Busca os dados do Estoque Atual direto da nuvem (Supabase)
             const response = await fetch('/api/pecas');
             const pecas = await response.json();
 
-            // 2. Busca os dados de Envios para a Linha (LocalStorage)
             const enviosSalvos = JSON.parse(localStorage.getItem('pecas_na_linha_salvas')) || [];
 
-            // 3. Formata os dados para a PRIMEIRA ABA (Estoque)
             const dadosEstoque = pecas.map(p => ({
                 "Código/ID": p.id,
                 "Descrição da Peça": p.nome,
@@ -582,9 +592,7 @@ if (btnExportarExcel) {
                 "Saldo Atual": p.qtd
             }));
 
-            // 4. Formata os dados para a SEGUNDA ABA (Envios)
             const dadosEnvios = enviosSalvos.map(e => {
-                // Converte a data do formato Americano (AAAA-MM-DD) para Brasileiro (DD/MM/AAAA)
                 let dataFormatada = e.data_envio;
                 if (dataFormatada && dataFormatada.includes('-')) {
                     dataFormatada = dataFormatada.split('-').reverse().join('/');
@@ -598,7 +606,6 @@ if (btnExportarExcel) {
                 };
             });
 
-            // 5. Cria o arquivo Excel e as duas abas
             const workbook = XLSX.utils.book_new();
 
             const worksheetEstoque = XLSX.utils.json_to_sheet(dadosEstoque);
@@ -607,7 +614,6 @@ if (btnExportarExcel) {
             const worksheetEnvios = XLSX.utils.json_to_sheet(dadosEnvios);
             XLSX.utils.book_append_sheet(workbook, worksheetEnvios, "Envios p_ Linha");
 
-            // 6. Dispara o download automático com a data do dia
             const dataHoje = new Date().toISOString().split('T')[0].split('-').reverse().join('-');
             XLSX.writeFile(workbook, `Relatorio_Geral_Estoque_${dataHoje}.xlsx`);
 
@@ -615,7 +621,6 @@ if (btnExportarExcel) {
             console.error("Erro ao gerar Excel:", error);
             alert("Erro ao gerar a planilha. Verifique sua conexão com a internet.");
         } finally {
-            // Destrava o botão
             btnExportarExcel.textContent = "📊 Exportar Relatório Completo";
             btnExportarExcel.disabled = false;
         }
