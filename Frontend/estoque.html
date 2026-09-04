@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Estoque e Peças</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Biblioteca para exportar Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="dashboard-body">
     
@@ -148,9 +150,13 @@
         </div>
 
         <!-- Tabela Geral de Estoque e Peças Cadastradas -->
-        <section class="card table-card" style="margin-top: 20px;">
-            <h2>Estoque Atual de Peças Cortadas</h2>
-            <table class="estoque-table">
+       <section class="card table-card" style="margin-top: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0;">Estoque Atual de Peças Cortadas</h2>
+        <button id="btnExportarExcel" class="btn-primary" style="background-color: #27ae60; margin: 0; padding: 10px 15px;">📊 Exportar Relatório Completo</button>
+    </div>
+    
+    <table class="estoque-table">
                 <thead>
                     <tr>
                         <th>Código / ID</th>

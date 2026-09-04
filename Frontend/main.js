@@ -552,5 +552,74 @@ async function carregarDropdownLinha() {
         select.innerHTML = '<option value="">Erro ao carregar estoque</option>';
     }
 }
+// ==========================================
+// LÓGICA DE EXPORTAÇÃO PARA EXCEL (.xlsx) - MÚLTIPLAS ABAS
+// ==========================================
+const btnExportarExcel = document.getElementById('btnExportarExcel');
+
+if (btnExportarExcel) {
+    btnExportarExcel.addEventListener('click', async function() {
+        try {
+            // Trava o botão para evitar cliques múltiplos
+            btnExportarExcel.textContent = "⏳ Gerando Relatório...";
+            btnExportarExcel.disabled = true;
+
+            // 1. Busca os dados do Estoque Atual direto da nuvem (Supabase)
+            const response = await fetch('/api/pecas');
+            const pecas = await response.json();
+
+            // 2. Busca os dados de Envios para a Linha (LocalStorage)
+            const enviosSalvos = JSON.parse(localStorage.getItem('pecas_na_linha_salvas')) || [];
+
+            // 3. Formata os dados para a PRIMEIRA ABA (Estoque)
+            const dadosEstoque = pecas.map(p => ({
+                "Código/ID": p.id,
+                "Descrição da Peça": p.nome,
+                "Estoque Pertencente": p.estoqueDestino || 'Lidiane',
+                "Comprimento (mm)": p.d1,
+                "Largura (mm)": p.d2,
+                "Espessura (mm)": p.d3,
+                "Saldo Atual": p.qtd
+            }));
+
+            // 4. Formata os dados para a SEGUNDA ABA (Envios)
+            const dadosEnvios = enviosSalvos.map(e => {
+                // Converte a data do formato Americano (AAAA-MM-DD) para Brasileiro (DD/MM/AAAA)
+                let dataFormatada = e.data_envio;
+                if (dataFormatada && dataFormatada.includes('-')) {
+                    dataFormatada = dataFormatada.split('-').reverse().join('/');
+                }
+                
+                return {
+                    "Data do Envio": dataFormatada || "N/A",
+                    "Linha de Produção": e.linha,
+                    "Descrição da Peça": e.peca,
+                    "Quantidade Enviada": e.quantidade
+                };
+            });
+
+            // 5. Cria o arquivo Excel e as duas abas
+            const workbook = XLSX.utils.book_new();
+
+            const worksheetEstoque = XLSX.utils.json_to_sheet(dadosEstoque);
+            XLSX.utils.book_append_sheet(workbook, worksheetEstoque, "Estoque Atual");
+
+            const worksheetEnvios = XLSX.utils.json_to_sheet(dadosEnvios);
+            XLSX.utils.book_append_sheet(workbook, worksheetEnvios, "Envios p_ Linha");
+
+            // 6. Dispara o download automático com a data do dia
+            const dataHoje = new Date().toISOString().split('T')[0].split('-').reverse().join('-');
+            XLSX.writeFile(workbook, `Relatorio_Geral_Estoque_${dataHoje}.xlsx`);
+
+        } catch (error) {
+            console.error("Erro ao gerar Excel:", error);
+            alert("Erro ao gerar a planilha. Verifique sua conexão com a internet.");
+        } finally {
+            // Destrava o botão
+            btnExportarExcel.textContent = "📊 Exportar Relatório Completo";
+            btnExportarExcel.disabled = false;
+        }
+    });
+}
 
 carregarDropdownLinha();
