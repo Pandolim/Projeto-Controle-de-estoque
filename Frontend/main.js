@@ -493,12 +493,19 @@ if (tabelaTriagemEstoque) {
         });
     }
 
-    // AGORA ESTA FUNÇÃO FAZ A MÁGICA COM O BANCO DE DADOS (ASYNC)
+    // AGORA ESTA FUNÇÃO FAZ A MÁGICA COM O BANCO DE DADOS E CONFIRMA A QUANTIDADE
     window.atualizarPedidoExtra = async function(index, novoStatus) {
         const pedido = listaPedidosExtras[index];
 
         try {
             if (novoStatus === 'Atendido pelo Estoque') {
+                // Pergunta a quantidade real antes de dar a baixa
+                let qtdInput = prompt(`Pedido original: ${pedido.qtd} peças.\nQuantas peças estão sendo efetivamente fornecidas do estoque agora?`, pedido.qtd);
+                if (qtdInput === null) return; // Operador clicou em Cancelar
+                
+                let qtdFornecida = parseInt(qtdInput);
+                if (isNaN(qtdFornecida) || qtdFornecida <= 0) { alert("Quantidade inválida!"); return; }
+
                 // 1. Acha o ID real da peça no catálogo pela descrição
                 const pecaBanco = catalogoPecas.find(p => p.nome === pedido.peca);
                 if (!pecaBanco) {
@@ -506,36 +513,45 @@ if (tabelaTriagemEstoque) {
                     return;
                 }
 
-                // 2. Dá baixa no Supabase
+                // 2. Dá baixa no Supabase COM A QUANTIDADE REAL
                 const resBaixa = await fetch('/api/pecas/movimentar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: pecaBanco.id, tipo: 'saida', quantidade: pedido.qtd })
+                    body: JSON.stringify({ id: pecaBanco.id, tipo: 'saida', quantidade: qtdFornecida })
                 });
 
                 if (!resBaixa.ok) {
-                    alert("❌ Operação negada: Estoque insuficiente para atender o pedido inteiro diretamente.");
-                    return; // Para a execução se não tem saldo
+                    alert(`❌ Operação negada: O estoque atual não possui ${qtdFornecida} peças para atender esse pedido.`);
+                    return; 
                 }
 
-                // 3. Lança no Relatório de Envios (Corte Extra = Falso)
+                // 3. Lança no Relatório de Envios 
                 await fetch('/api/envios', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: pedido.qtd, is_extra: false })
+                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: qtdFornecida, is_extra: false })
                 });
 
-                alert(`✅ Pedido atendido! Peças deduzidas do estoque e lançadas na Saída de Linha.`);
+                pedido.qtd = qtdFornecida; // Atualiza no visual da tela
+                alert(`✅ Pedido atendido! ${qtdFornecida} peças deduzidas do estoque e lançadas na Saída de Linha.`);
 
             } else if (novoStatus === 'Repassado à Produção') {
-                // Lança direto no Relatório de Envios (Corte Extra = Verdadeiro, não mexe no saldo)
+                // Pergunta a quantidade real do repasse
+                let qtdInput = prompt(`O pedido pedia ${pedido.qtd} peças.\nQuantas peças vindas da serra estão sendo repassadas à produção agora?`, pedido.qtd);
+                if (qtdInput === null) return;
+                
+                let qtdFornecida = parseInt(qtdInput);
+                if (isNaN(qtdFornecida) || qtdFornecida <= 0) { alert("Quantidade inválida!"); return; }
+
+                // Lança direto no Relatório de Envios (Corte Extra)
                 await fetch('/api/envios', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: pedido.qtd, is_extra: true })
+                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: qtdFornecida, is_extra: true })
                 });
 
-                alert(`✅ Repasse concluído! Peças lançadas na Saída de Linha com etiqueta [EXTRA].`);
+                pedido.qtd = qtdFornecida; // Atualiza visual
+                alert(`✅ Repasse concluído! ${qtdFornecida} peças lançadas na Saída de Linha com etiqueta [EXTRA].`);
             }
             
             // Atualiza o status visual
@@ -544,7 +560,7 @@ if (tabelaTriagemEstoque) {
             renderizarTriagemEstoque();
             if (typeof renderizarPedidosSerra === 'function') renderizarPedidosSerra();
             
-            // Força as tabelas da nuvem a atualizarem para exibir as novidades na hora
+            // Força as tabelas da nuvem a atualizarem
             if (typeof carregarEstoqueDoBanco === 'function') carregarEstoqueDoBanco();
             if (typeof carregarEnviosDoBanco === 'function') carregarEnviosDoBanco();
 
@@ -574,12 +590,34 @@ if (tabelaPedidosExtras) {
             tabelaPedidosExtras.appendChild(tr);
         });
     }
-    window.concluirCorteExtra = function(index) {
+   window.concluirCorteExtra = function(index) {
+        const pedido = listaPedidosExtras[index];
+        
+        // Pergunta a quantidade real cortada pela serra
+        let qtdInput = prompt(`O pedido original era de ${pedido.qtd} peças.\nQuantas peças foram efetivamente CORTADAS?`, pedido.qtd);
+        if (qtdInput === null) return; // Operador cancelou
+        
+        let qtdCortada = parseInt(qtdInput);
+        if (isNaN(qtdCortada) || qtdCortada <= 0) {
+            alert("Quantidade inválida!");
+            return;
+        }
+
+        // Atualiza a quantidade do pedido para a real cortada
+        listaPedidosExtras[index].qtd = qtdCortada; 
         listaPedidosExtras[index].status = 'Cortado pela Serra';
+        
         localStorage.setItem('pedidos_extras_salvos', JSON.stringify(listaPedidosExtras));
         renderizarPedidosSerra();
+        
+        // Atualiza a tabela do estoque também, se estiver na mesma página
+        const tabelaTriagemEstoque = document.getElementById('tabelaTriagemEstoque');
+        if (tabelaTriagemEstoque && typeof renderizarTriagemEstoque === 'function') {
+            renderizarTriagemEstoque();
+        }
     };
-}
+    };
+
 
 // ==========================================
 // LÓGICA DE PEÇAS ENVIADAS PARA A LINHA E NUVEM
