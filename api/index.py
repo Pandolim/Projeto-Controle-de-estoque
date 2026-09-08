@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 import sys
 import os
 
@@ -123,6 +124,74 @@ def deletar_peca(id_peca):
         return jsonify({"status": "sucesso"}), 200
     except Exception as e:
         return jsonify({"erro": str(e)}), 400
+    
+# ==========================================
+# ROTAS PARA O HISTÓRICO DE ENVIOS (NUVEM)
+# ==========================================
+@app.route('/api/envios', methods=['GET', 'POST'])
+def gerenciar_envios():
+    if request.method == 'POST':
+        dados = request.json
+        try:
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            
+            # Salva o novo envio no Supabase
+            sql = text("""
+                INSERT INTO historico_envios (data_envio, linha, peca, quantidade, is_extra) 
+                VALUES (:data_envio, :linha, :peca, :quantidade, :is_extra)
+            """)
+            session.execute(sql, {
+                'data_envio': dados['data_envio'],
+                'linha': dados['linha'],
+                'peca': dados['peca'],
+                'quantidade': dados['quantidade'],
+                'is_extra': dados.get('is_extra', False)
+            })
+            session.commit()
+            session.close()
+            return jsonify({'status': 'sucesso'}), 201
+        except Exception as e:
+            return jsonify({'erro': str(e)}), 500
+
+    elif request.method == 'GET':
+        try:
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            
+            # Busca todos os envios ordenados do mais recente pro mais antigo
+            sql = text("SELECT id, data_envio, linha, peca, quantidade, is_extra FROM historico_envios ORDER BY id DESC")
+            resultados = session.execute(sql).fetchall()
+            
+            lista_envios = []
+            for linha in resultados:
+                lista_envios.append({
+                    'id': linha[0],
+                    'data_envio': str(linha[1]) if linha[1] else None,
+                    'linha': linha[2],
+                    'peca': linha[3],
+                    'quantidade': linha[4],
+                    'is_extra': linha[5]
+                })
+            
+            session.close()
+            return jsonify(lista_envios), 200
+        except Exception as e:
+            return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/envios/<int:id_envio>', methods=['DELETE'])
+def deletar_envio(id_envio):
+    try:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        sql = text("DELETE FROM historico_envios WHERE id = :id")
+        session.execute(sql, {'id': id_envio})
+        session.commit()
+        session.close()
+        return jsonify({'status': 'sucesso'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 
 if __name__ == '__main__':
     app.run()
