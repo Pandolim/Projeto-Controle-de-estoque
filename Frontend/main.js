@@ -223,12 +223,24 @@ if (formOP && tabsLinhas) {
 }
 
 // ==========================================
-// LÓGICA DO MÓDULO DE ESTOQUE E PEÇAS (SUPABASE)
+// LÓGICA DO MÓDULO DE ESTOQUE E PEÇAS (SUPABASE) E FILTROS DE TABELA
 // ==========================================
 const formCadPeca = document.getElementById('formCadPeca');
 const formMovEstoque = document.getElementById('formMovEstoque');
 const tabelaEstoqueGeral = document.getElementById('tabelaEstoqueGeral');
 const selectPecaEstoque = document.getElementById('selectPecaEstoque');
+
+// Captura os novos campos de filtro do HTML
+const buscaEstoqueGeral = document.getElementById('buscaEstoqueGeral');
+const filtroOcultarZeradas = document.getElementById('filtroOcultarZeradas');
+
+// Adiciona "escutadores" para refazer a tabela toda vez que o usuário digitar ou clicar
+if (buscaEstoqueGeral) {
+    buscaEstoqueGeral.addEventListener('input', renderizarTabelaEstoqueGeral);
+}
+if (filtroOcultarZeradas) {
+    filtroOcultarZeradas.addEventListener('change', renderizarTabelaEstoqueGeral);
+}
 
 let catalogoPecas = [];
 
@@ -295,37 +307,71 @@ function carregarEstoqueDoBanco() {
     fetch('/api/pecas')
     .then(res => res.json())
     .then(pecas => {
-        catalogoPecas = pecas;
-        tabelaEstoqueGeral.innerHTML = '';
+        catalogoPecas = pecas; // Salva na memória global do navegador
+        
+        // Atualiza o dropdown de Movimentação de Estoque
         selectPecaEstoque.innerHTML = '<option value="">Selecione uma peça...</option>';
-
         pecas.forEach((peca) => {
             const dest = peca.estoqueDestino || 'N/A';
-            const destColor = dest === 'Lidiane' ? '#8e44ad' : '#e67e22'; 
-            
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><strong>${peca.id}</strong><br><span style="font-size:11px; background:${destColor}; color:#fff; padding:2px 4px; border-radius:3px;">${dest}</span></td>
-                <td>${peca.nome}</td>
-                <td>${peca.d1}mm x ${peca.d2}mm x ${peca.d3}mm</td>
-                <td><strong style="font-size: 16px; color: ${peca.qtd > 0 ? '#2ecc71' : '#e74c3c'};">${peca.qtd}</strong></td>
-                <td><button class="btn-edit" onclick="removerPecaCatalogo('${peca.id}')" style="background-color: #e74c3c;">Excluir</button></td>
-            `;
-            tabelaEstoqueGeral.appendChild(tr);
-
             const opt = document.createElement('option');
             opt.value = peca.id;
             opt.textContent = `${peca.nome} (${dest}) - Saldo: ${peca.qtd}`;
             selectPecaEstoque.appendChild(opt);
         });
 
-        // ATIVA A BARRA DE PESQUISA (Select2)
         if(typeof $ !== 'undefined') {
             $('#selectPecaEstoque').select2();
         }
 
+        // Chama a função que desenha a tabela filtrada
+        renderizarTabelaEstoqueGeral();
     })
     .catch(err => console.error("Erro ao buscar peças:", err));
+}
+
+function renderizarTabelaEstoqueGeral() {
+    if (!tabelaEstoqueGeral) return;
+    tabelaEstoqueGeral.innerHTML = ''; // Limpa a tabela
+    
+    // Pega o que o usuário digitou e o status da caixinha
+    const termoBusca = buscaEstoqueGeral ? buscaEstoqueGeral.value.toLowerCase() : '';
+    const ocultarZeradas = filtroOcultarZeradas ? filtroOcultarZeradas.checked : false;
+
+    // Filtra a lista principal antes de desenhar
+    const pecasFiltradas = catalogoPecas.filter(peca => {
+        // 1. Regra de ocultar zeradas
+        if (ocultarZeradas && peca.qtd <= 0) return false;
+        
+        // 2. Regra da barra de pesquisa (busca por nome, id ou medidas)
+        if (termoBusca) {
+            const textoBusca = `${peca.nome} ${peca.id} ${peca.d1} ${peca.d2} ${peca.d3}`.toLowerCase();
+            if (!textoBusca.includes(termoBusca)) return false;
+        }
+        
+        return true; // Se passou pelos filtros, aparece na tela
+    });
+
+    // Se a busca não encontrou nada
+    if (pecasFiltradas.length === 0) {
+        tabelaEstoqueGeral.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #7f8c8d;">Nenhuma peça encontrada com esses filtros.</td></tr>`;
+        return;
+    }
+
+    // Desenha apenas as peças que sobraram no filtro
+    pecasFiltradas.forEach((peca) => {
+        const dest = peca.estoqueDestino || 'N/A';
+        const destColor = dest === 'Lidiane' ? '#8e44ad' : '#e67e22'; 
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${peca.id}</strong><br><span style="font-size:11px; background:${destColor}; color:#fff; padding:2px 4px; border-radius:3px;">${dest}</span></td>
+            <td>${peca.nome}</td>
+            <td>${peca.d1}mm x ${peca.d2}mm x ${peca.d3}mm</td>
+            <td><strong style="font-size: 16px; color: ${peca.qtd > 0 ? '#2ecc71' : '#e74c3c'};">${peca.qtd}</strong></td>
+            <td><button class="btn-edit" onclick="removerPecaCatalogo('${peca.id}')" style="background-color: #e74c3c;">Excluir</button></td>
+        `;
+        tabelaEstoqueGeral.appendChild(tr);
+    });
 }
 
 window.removerPecaCatalogo = function(id_peca) {
