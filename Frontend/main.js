@@ -393,17 +393,68 @@ const tabelaPedidosExtras = document.getElementById('tabelaPedidosExtras');
 
 let listaPedidosExtras = JSON.parse(localStorage.getItem('pedidos_extras_salvos')) || [];
 
+// NOVA FUNÇÃO: Puxa o catálogo da nuvem para popular o dropdown de pedidos extras
+async function carregarDropdownPedidosExtras() {
+    const selectExtra = document.getElementById('extraPeca');
+    if (!selectExtra) return;
+
+    try {
+        const response = await fetch('/api/pecas');
+        const pecas = await response.json();
+        
+        selectExtra.innerHTML = '<option value="">Selecione uma peça...</option>';
+
+        // Insere as peças. Diferente do envio para linha, aqui mostramos o Saldo
+        pecas.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.nome; // Salvamos o nome da peça direto como valor
+            option.textContent = `${p.nome} - Saldo Atual: ${p.qtd} un.`; 
+            selectExtra.appendChild(option);
+        });
+
+        // Ativa a barra de pesquisa bonita do Select2
+        if(typeof $ !== 'undefined') {
+            $('#extraPeca').select2();
+        }
+    } catch (error) {
+        console.error("Erro ao carregar peças para o pedido extra:", error);
+        selectExtra.innerHTML = '<option value="">Erro ao carregar catálogo</option>';
+    }
+}
+
 if (formPedidoExtra) {
+    // Roda a função de carregar o catálogo logo que a página abre
+    carregarDropdownPedidosExtras();
+
     formPedidoExtra.addEventListener('submit', function(event) {
         event.preventDefault();
         const motivo = document.getElementById('extraMotivo').value.trim();
         if (motivo.length < 10) { alert('A justificativa está muito curta. Por favor, detalhe melhor.'); return; }
         
-        const novoPedido = { id: `EXT-${Math.floor(Math.random() * 9000) + 1000}`, peca: document.getElementById('extraPeca').value.trim(), qtd: parseInt(document.getElementById('extraQtd').value), motivo: motivo, status: 'Pendente no Estoque' };
+        const linhaSolicitante = document.getElementById('extraLinha').value;
+        const pecaSelecionada = document.getElementById('extraPeca').value;
+
+        if (!linhaSolicitante || !pecaSelecionada) {
+            alert('Por favor, selecione a linha solicitante e a peça desejada.');
+            return;
+        }
+        
+        const novoPedido = { 
+            id: `EXT-${Math.floor(Math.random() * 9000) + 1000}`, 
+            linha: linhaSolicitante, // Salva a linha solicitante no registro
+            peca: pecaSelecionada, 
+            qtd: parseInt(document.getElementById('extraQtd').value), 
+            motivo: motivo, 
+            status: 'Pendente no Estoque' 
+        };
+        
         listaPedidosExtras.unshift(novoPedido);
         localStorage.setItem('pedidos_extras_salvos', JSON.stringify(listaPedidosExtras));
-        alert(`Pedido ${novoPedido.id} enviado para avaliação do Estoque!`);
+        alert(`Pedido ${novoPedido.id} da linha ${linhaSolicitante} enviado para avaliação do Estoque!`);
+        
         formPedidoExtra.reset();
+        // Limpa a barra de pesquisa
+        if(typeof $ !== 'undefined') $('#extraPeca').val(null).trigger('change'); 
     });
 }
 
@@ -414,10 +465,15 @@ if (tabelaTriagemEstoque) {
         listaPedidosExtras.forEach((pedido, index) => {
             const tr = document.createElement('tr');
             let botoesAcao = '';
+            
             if (pedido.status === 'Pendente no Estoque') botoesAcao = `<button class="btn-primary" style="background-color: #2ecc71; padding: 6px; margin: 2px; font-size: 12px;" onclick="atualizarPedidoExtra(${index}, 'Atendido pelo Estoque')">Fornecer do Estoque</button><button class="btn-primary" style="background-color: #e74c3c; padding: 6px; margin: 2px; font-size: 12px;" onclick="atualizarPedidoExtra(${index}, 'Enviado para Serra')">Solicitar à Serra</button>`;
             else if (pedido.status === 'Cortado pela Serra') botoesAcao = `<button class="btn-primary" style="background-color: #3498db; padding: 6px;" onclick="atualizarPedidoExtra(${index}, 'Repassado à Produção')">Repassar à Produção</button>`;
             else { botoesAcao = `<span style="color: #7f8c8d;">Finalizado</span>`; tr.style.opacity = '0.6'; }
-            tr.innerHTML = `<td><strong>${pedido.id}</strong></td><td>${pedido.peca}</td><td><strong style="color: #e74c3c;">${pedido.qtd}</strong></td><td style="font-size: 12px; max-width: 200px;"><em>"${pedido.motivo}"</em></td><td style="font-weight: bold;">${pedido.status}</td><td>${botoesAcao}</td>`;
+            
+            // Cria uma etiqueta bonita para mostrar a linha solicitante
+            const badgeLinha = pedido.linha ? `<br><span style="font-size: 11px; background-color: #34495e; color: white; padding: 2px 4px; border-radius: 3px; display: inline-block; margin-top: 4px;">Linha: ${pedido.linha}</span>` : '';
+
+            tr.innerHTML = `<td><strong>${pedido.id}</strong></td><td>${pedido.peca} ${badgeLinha}</td><td><strong style="color: #e74c3c;">${pedido.qtd}</strong></td><td style="font-size: 12px; max-width: 200px;"><em>"${pedido.motivo}"</em></td><td style="font-weight: bold;">${pedido.status}</td><td>${botoesAcao}</td>`;
             tabelaTriagemEstoque.appendChild(tr);
         });
     }
@@ -440,7 +496,11 @@ if (tabelaPedidosExtras) {
             const tr = document.createElement('tr');
             let botaoAcao = pedido.status === 'Enviado para Serra' ? `<button class="btn-primary" style="background-color: #f39c12; padding: 6px;" onclick="concluirCorteExtra(${realIndex})">Informar Estoque: Corte Concluído</button>` : `<span style="color: #7f8c8d;">Devolvido ao Estoque</span>`;
             if (pedido.status !== 'Enviado para Serra') tr.style.opacity = '0.6';
-            tr.innerHTML = `<td><strong>${pedido.id}</strong></td><td>${pedido.peca}</td><td><strong style="color: #e74c3c;">${pedido.qtd}</strong></td><td style="font-size: 12px; max-width: 200px;"><em>"${pedido.motivo}"</em></td><td style="color: #e74c3c; font-weight: bold;">${pedido.status}</td><td>${botaoAcao}</td>`;
+
+            // Mesma etiqueta da linha para a tabela da Serra
+            const badgeLinha = pedido.linha ? `<br><span style="font-size: 11px; background-color: #34495e; color: white; padding: 2px 4px; border-radius: 3px; display: inline-block; margin-top: 4px;">Linha: ${pedido.linha}</span>` : '';
+
+            tr.innerHTML = `<td><strong>${pedido.id}</strong></td><td>${pedido.peca} ${badgeLinha}</td><td><strong style="color: #e74c3c;">${pedido.qtd}</strong></td><td style="font-size: 12px; max-width: 200px;"><em>"${pedido.motivo}"</em></td><td style="color: #e74c3c; font-weight: bold;">${pedido.status}</td><td>${botaoAcao}</td>`;
             tabelaPedidosExtras.appendChild(tr);
         });
     }
