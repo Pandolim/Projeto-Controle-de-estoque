@@ -1,33 +1,30 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Gestão de Estoque</title>
-    <!-- Aqui conectamos o visual -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="login-body">
-    
-    <div class="login-container">
-        <h2>Acesso ao Sistema</h2>
-        
-        <form id="formLogin">
-            <div class="input-group">
-                <label for="usuario">Usuário</label>
-                <input type="text" id="usuario" name="usuario" placeholder="Ex: kennedy, pcp, serra ou almoxarifado" required>
-            </div>
-            
-            <div class="input-group">
-                <label for="senha">Senha</label>
-                <input type="password" id="senha" name="senha" placeholder="Insira a sua senha" required>
-            </div>
-            
-            <button type="submit" class="btn-login">Entrar</button>
-        </form>
-    </div>
+// ==========================================
+// LÓGICA DE LOGIN
+// ==========================================
+const formLogin = document.getElementById('formLogin');
 
-    <!-- Aqui conectamos a lógica -->
-    <script src="main.js"></script>
-</body>
-</html>
+if (formLogin) {
+    formLogin.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const usuario = document.getElementById('usuario').value.trim().toLowerCase();
+        const senha = document.getElementById('senha').value;
+
+        // 1. Logins Administrativos
+        if (usuario === 'kennedy' && senha === '123') { window.location.href = 'admin.html'; }
+        else if (usuario === 'pcp' && senha === '123') { window.location.href = 'pcp.html'; }
+        else if (usuario === 'serra' && senha === '123') { window.location.href = 'serra.html'; }
+        else if (usuario === 'almoxarifado' && senha === '123') { window.location.href = 'almoxarifado.html'; }
+        
+        // 2. Logins das Linhas de Produção
+        else if (['stilo1', 'stilo2', 'stilo3', 'economica', 'hibrida', 'bux', 'desenvolvimento'].includes(usuario) && senha === '123') {
+            
+            // Salva na memória do tablet qual linha fez o login
+            localStorage.setItem('linha_logada', usuario);
+            
+            window.location.href = 'producao.html';
+        }
+        else {
+            alert('Usuário ou senha incorretos! Teste com o nome da sua linha (ex: stilo1, hibrida).');
+        }
+    });
+}
