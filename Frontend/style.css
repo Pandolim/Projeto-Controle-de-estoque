@@ -291,3 +291,68 @@ select:disabled, input:disabled, button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
+/* ==========================================
+   RESPONSIVIDADE (TABLETS E CELULARES)
+   ========================================== */
+
+/* Regras aplicadas automaticamente em telas menores que 768px (Smartphones e Tablets em pé) */
+@media (max-width: 768px) {
+    
+    /* 1. Ajuste do Cabeçalho */
+    .dashboard-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+        padding: 15px;
+    }
+
+    /* 2. Grades empilhadas (Tudo em uma coluna só) */
+    .grid-entradas {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    /* 3. Campos lado a lado agora ficam um embaixo do outro */
+    .input-row {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .input-row .input-group {
+        width: 100%;
+    }
+
+    /* 4. Formulário de Envio para a Linha (Força 100% de largura) */
+    #formPecaLinha {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    #formPecaLinha .input-group {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
+    #formPecaLinha button {
+        width: 100%;
+        margin-top: 10px !important;
+    }
+
+    /* 5. Tabelas Responsivas (Cria uma barra de rolagem horizontal para não quebrar a tela) */
+    .table-card {
+        width: 100%;
+        overflow-x: auto; /* Permite arrastar a tabela para o lado */
+        -webkit-overflow-scrolling: touch; /* Deixa a rolagem suave no celular */
+    }
+
+    .estoque-table {
+        min-width: 700px; /* Impede que o texto fique esmagado, forçando a rolagem */
+    }
+
+    /* 6. Barra de busca e filtros empilhados */
+    #buscaEstoqueGeral {
+        width: 100%;
+        min-width: 100% !important;
+    }
+}
