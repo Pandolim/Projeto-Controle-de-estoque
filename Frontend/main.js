@@ -452,12 +452,14 @@ if (tabelaPedidosExtras) {
 }
 
 // ==========================================
-// LÓGICA DE PEÇAS ENVIADAS PARA A LINHA COM FILTRO DE DATA
+// LÓGICA DE PEÇAS ENVIADAS PARA A LINHA E NUVEM
 // ==========================================
 const formPecaLinha = document.getElementById('formPecaLinha');
 const tabelaPecasNaLinha = document.getElementById('tabelaPecasNaLinha');
 const filtroDataLinha = document.getElementById('filtroDataLinha');
-let listaPecasNaLinha = JSON.parse(localStorage.getItem('pecas_na_linha_salvas')) || [];
+
+// AGORA A LISTA COMEÇA VAZIA E É PREENCHIDA PELA NUVEM (Adeus, localStorage!)
+let listaPecasNaLinha = []; 
 
 function obterDataLocalISO() {
     const hoje = new Date();
@@ -465,11 +467,25 @@ function obterDataLocalISO() {
     return new Date(hoje.getTime() - offset).toISOString().split('T')[0];
 }
 
+// NOVA FUNÇÃO: Busca os envios salvos no Supabase
+async function carregarEnviosDoBanco() {
+    if (!tabelaPecasNaLinha) return;
+    try {
+        const response = await fetch('/api/envios');
+        listaPecasNaLinha = await response.json();
+        renderizarPecasNaLinha();
+    } catch (error) {
+        console.error("Erro ao carregar histórico de envios:", error);
+    }
+}
+
 if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
     
     filtroDataLinha.value = obterDataLocalISO();
     filtroDataLinha.addEventListener('change', renderizarPecasNaLinha);
-    renderizarPecasNaLinha();
+    
+    // Carrega o histórico da nuvem assim que a página abre
+    carregarEnviosDoBanco();
 
     formPecaLinha.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -479,7 +495,6 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
         const qtdStr = document.getElementById('pecaEnviadaQtd').value;
         const linha = document.getElementById('linhaDestinoSelect').value;
         
-        // Verifica se a caixinha de Pedido Extra está marcada
         const checkExtra = document.getElementById('checkPedidoExtra');
         const isPedidoExtra = checkExtra ? checkExtra.checked : false;
 
@@ -498,7 +513,7 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
         btnSubmit.textContent = "Processando...";
 
         try {
-            // SE NÃO FOR PEDIDO EXTRA, FAZ A BAIXA NORMAL NO BANCO
+            // 1. SE NÃO FOR EXTRA, DÁ BAIXA NO ESTOQUE PRIMEIRO
             if (!isPedidoExtra) {
                 const response = await fetch('/api/pecas/movimentar', {
                     method: 'POST',
@@ -511,34 +526,35 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
                     alert("❌ Operação negada pelo sistema: " + erro.erro);
                     btnSubmit.disabled = false;
                     btnSubmit.textContent = "Registrar Envio";
-                    return; // Para a execução aqui se deu erro de saldo
+                    return; // Interrompe se deu erro (ex: falta de saldo)
                 }
             }
 
-            // SE CHEGOU AQUI: Ou a API autorizou a baixa, OU é um Pedido Extra (ignorou a API)
-            const novoEnvio = {
-                id: Date.now(),
-                data_envio: obterDataLocalISO(),
-                linha: linha,
-                peca: nomePeca,
-                quantidade: qtd,
-                isExtra: isPedidoExtra // Salva a flag de extra no histórico
-            };
-            
-            listaPecasNaLinha.unshift(novoEnvio);
-            localStorage.setItem('pecas_na_linha_salvas', JSON.stringify(listaPecasNaLinha));
+            // 2. SALVA O RELATÓRIO DO ENVIO NO SUPABASE
+            await fetch('/api/envios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data_envio: obterDataLocalISO(),
+                    linha: linha,
+                    peca: nomePeca,
+                    quantidade: qtd,
+                    is_extra: isPedidoExtra
+                })
+            });
             
             filtroDataLinha.value = obterDataLocalISO();
-            renderizarPecasNaLinha();
             formPecaLinha.reset();
             
-            if (checkExtra) checkExtra.checked = false; // desmarca a caixinha
+            if (checkExtra) checkExtra.checked = false;
             if(typeof $ !== 'undefined') $('#selectPecaLinha').val(null).trigger('change');
             
             alert(`✅ Sucesso! ${qtd} unidades de ${nomePeca} enviadas para a linha ${linha}. ${isPedidoExtra ? '(Registrado como Corte Extra)' : ''}`);
             
+            // Atualiza tudo visualmente puxando os novos dados da nuvem
             carregarDropdownLinha();
             carregarEstoqueDoBanco(); 
+            carregarEnviosDoBanco(); 
             
         } catch (error) {
             console.error("Erro na comunicação:", error);
@@ -557,7 +573,7 @@ function renderizarPecasNaLinha() {
     const dataSelecionada = filtroDataLinha.value;
     
     const listaFiltrada = listaPecasNaLinha.filter(item => {
-        const dataItem = item.data_envio || new Date(item.id).toISOString().split('T')[0];
+        const dataItem = item.data_envio;
         return dataItem === dataSelecionada;
     });
 
@@ -568,27 +584,28 @@ function renderizarPecasNaLinha() {
     }
     
     listaFiltrada.forEach((item) => {
-        const realIndex = listaPecasNaLinha.findIndex(p => p.id === item.id);
         const tr = document.createElement('tr');
-        
-        // Cria a etiqueta visual (Badge) vermelha se for um pedido extra
-        const badgeExtra = item.isExtra ? `<span style="background-color: #e74c3c; color: white; font-size: 10px; padding: 2px 5px; border-radius: 3px; margin-left: 8px; vertical-align: middle;">EXTRA</span>` : '';
+        const badgeExtra = item.is_extra ? `<span style="background-color: #e74c3c; color: white; font-size: 10px; padding: 2px 5px; border-radius: 3px; margin-left: 8px; vertical-align: middle;">EXTRA</span>` : '';
 
+        // O botão remover agora envia o ID real do banco (item.id)
         tr.innerHTML = `
             <td><span style="background: #eef2f3; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${item.linha}</span></td>
             <td>${item.peca} ${badgeExtra}</td>
             <td><strong style="color: #27ae60; font-size: 16px;">${item.quantidade}</strong></td>
-            <td><button class="btn-edit" style="background-color: #e74c3c; padding: 6px 12px;" onclick="removerPecaLinha(${realIndex})">Remover</button></td>
+            <td><button class="btn-edit" style="background-color: #e74c3c; padding: 6px 12px;" onclick="removerPecaLinha(${item.id})">Remover</button></td>
         `;
         tabelaPecasNaLinha.appendChild(tr);
     });
 }
 
-window.removerPecaLinha = function(index) {
-    if (confirm("Deseja realmente remover este registro de envio para a linha?")) {
-        listaPecasNaLinha.splice(index, 1);
-        localStorage.setItem('pecas_na_linha_salvas', JSON.stringify(listaPecasNaLinha));
-        renderizarPecasNaLinha();
+window.removerPecaLinha = async function(id) {
+    if (confirm("Deseja realmente remover este registro de envio do banco de dados?")) {
+        try {
+            await fetch(`/api/envios/${id}`, { method: 'DELETE' });
+            carregarEnviosDoBanco(); // Atualiza a tabela na tela
+        } catch(e) {
+            alert("Erro ao excluir. Verifique sua conexão.");
+        }
     }
 };
 
@@ -602,7 +619,6 @@ async function carregarDropdownLinha() {
         
         select.innerHTML = '<option value="">Selecione uma peça...</option>';
 
-        // Agora não removemos mais as peças com saldo 0, pois elas podem ser cortadas como Pedido Extra!
         pecas.forEach(p => {
             const option = document.createElement('option');
             option.value = p.id;
@@ -614,7 +630,6 @@ async function carregarDropdownLinha() {
         if(typeof $ !== 'undefined') {
             $('#selectPecaLinha').select2();
         }
-
     } catch (error) {
         console.error("Erro ao carregar peças para o envio:", error);
         select.innerHTML = '<option value="">Erro ao carregar estoque</option>';
@@ -635,7 +650,8 @@ if (btnExportarExcel) {
             const response = await fetch('/api/pecas');
             const pecas = await response.json();
 
-            const enviosSalvos = JSON.parse(localStorage.getItem('pecas_na_linha_salvas')) || [];
+            // Puxa a lista direto da memória atualizada pela nuvem
+            const enviosSalvos = listaPecasNaLinha; 
 
             const dadosEstoque = pecas.map(p => ({
                 "Código/ID": p.id,
@@ -658,7 +674,7 @@ if (btnExportarExcel) {
                     "Linha de Produção": e.linha,
                     "Descrição da Peça": e.peca,
                     "Quantidade Enviada": e.quantidade,
-                    "Corte Extra?": e.isExtra ? "Sim" : "Não" // NOVA COLUNA NO EXCEL
+                    "Corte Extra?": e.is_extra ? "Sim" : "Não"
                 };
             });
 
