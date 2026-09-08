@@ -432,6 +432,11 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
         const idPeca = select.value;
         const qtdStr = document.getElementById('pecaEnviadaQtd').value;
         const linha = document.getElementById('linhaDestinoSelect').value;
+        
+        // Verifica se a caixinha de Pedido Extra está marcada
+        const checkExtra = document.getElementById('checkPedidoExtra');
+        const isPedidoExtra = checkExtra ? checkExtra.checked : false;
+
         const btnSubmit = e.target.querySelector('button[type="submit"]'); 
         
         if (!idPeca || !qtdStr || !linha) {
@@ -440,57 +445,59 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
         }
 
         const qtd = parseInt(qtdStr);
-        // O Select2 muda a forma de acessar a option, então garantimos pegar a correta:
         const optionSelecionada = select.options[select.selectedIndex];
         const nomePeca = optionSelecionada ? optionSelecionada.dataset.nome : "";
 
-        // Trava o botão contra cliques duplos
         btnSubmit.disabled = true;
         btnSubmit.textContent = "Processando...";
 
         try {
-            const response = await fetch('/api/pecas/movimentar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: idPeca,
-                    tipo: 'saida',
-                    quantidade: qtd
-                })
-            });
+            // SE NÃO FOR PEDIDO EXTRA, FAZ A BAIXA NORMAL NO BANCO
+            if (!isPedidoExtra) {
+                const response = await fetch('/api/pecas/movimentar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: idPeca, tipo: 'saida', quantidade: qtd })
+                });
 
-            if (response.ok) {
-                const novoEnvio = {
-                    id: Date.now(),
-                    data_envio: obterDataLocalISO(),
-                    linha: linha,
-                    peca: nomePeca,
-                    quantidade: qtd
-                };
-                
-                listaPecasNaLinha.unshift(novoEnvio);
-                localStorage.setItem('pecas_na_linha_salvas', JSON.stringify(listaPecasNaLinha));
-                
-                filtroDataLinha.value = obterDataLocalISO();
-                renderizarPecasNaLinha();
-                formPecaLinha.reset();
-                
-                // Limpa o visual do Select2 após o reset do form
-                if(typeof $ !== 'undefined') $('#selectPecaLinha').val(null).trigger('change');
-                
-                alert(`✅ Sucesso! ${qtd} unidades de ${nomePeca} enviadas para a linha ${linha}.`);
-                
-                carregarDropdownLinha();
-                carregarEstoqueDoBanco(); 
-            } else {
-                const erro = await response.json();
-                alert("❌ Operação negada pelo sistema: " + erro.erro);
+                if (!response.ok) {
+                    const erro = await response.json();
+                    alert("❌ Operação negada pelo sistema: " + erro.erro);
+                    btnSubmit.disabled = false;
+                    btnSubmit.textContent = "Registrar Envio";
+                    return; // Para a execução aqui se deu erro de saldo
+                }
             }
+
+            // SE CHEGOU AQUI: Ou a API autorizou a baixa, OU é um Pedido Extra (ignorou a API)
+            const novoEnvio = {
+                id: Date.now(),
+                data_envio: obterDataLocalISO(),
+                linha: linha,
+                peca: nomePeca,
+                quantidade: qtd,
+                isExtra: isPedidoExtra // Salva a flag de extra no histórico
+            };
+            
+            listaPecasNaLinha.unshift(novoEnvio);
+            localStorage.setItem('pecas_na_linha_salvas', JSON.stringify(listaPecasNaLinha));
+            
+            filtroDataLinha.value = obterDataLocalISO();
+            renderizarPecasNaLinha();
+            formPecaLinha.reset();
+            
+            if (checkExtra) checkExtra.checked = false; // desmarca a caixinha
+            if(typeof $ !== 'undefined') $('#selectPecaLinha').val(null).trigger('change');
+            
+            alert(`✅ Sucesso! ${qtd} unidades de ${nomePeca} enviadas para a linha ${linha}. ${isPedidoExtra ? '(Registrado como Corte Extra)' : ''}`);
+            
+            carregarDropdownLinha();
+            carregarEstoqueDoBanco(); 
+            
         } catch (error) {
             console.error("Erro na comunicação:", error);
             alert("Erro ao comunicar com o servidor. Verifique sua internet.");
         } finally {
-            // Libera o botão novamente
             btnSubmit.disabled = false;
             btnSubmit.textContent = "Registrar Envio";
         }
@@ -517,9 +524,13 @@ function renderizarPecasNaLinha() {
     listaFiltrada.forEach((item) => {
         const realIndex = listaPecasNaLinha.findIndex(p => p.id === item.id);
         const tr = document.createElement('tr');
+        
+        // Cria a etiqueta visual (Badge) vermelha se for um pedido extra
+        const badgeExtra = item.isExtra ? `<span style="background-color: #e74c3c; color: white; font-size: 10px; padding: 2px 5px; border-radius: 3px; margin-left: 8px; vertical-align: middle;">EXTRA</span>` : '';
+
         tr.innerHTML = `
             <td><span style="background: #eef2f3; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${item.linha}</span></td>
-            <td>${item.peca}</td>
+            <td>${item.peca} ${badgeExtra}</td>
             <td><strong style="color: #27ae60; font-size: 16px;">${item.quantidade}</strong></td>
             <td><button class="btn-edit" style="background-color: #e74c3c; padding: 6px 12px;" onclick="removerPecaLinha(${realIndex})">Remover</button></td>
         `;
@@ -545,17 +556,15 @@ async function carregarDropdownLinha() {
         
         select.innerHTML = '<option value="">Selecione uma peça...</option>';
 
+        // Agora não removemos mais as peças com saldo 0, pois elas podem ser cortadas como Pedido Extra!
         pecas.forEach(p => {
-            if (p.qtd > 0) {
-                const option = document.createElement('option');
-                option.value = p.id;
-                option.textContent = `${p.nome} - Saldo: ${p.qtd} un.`; 
-                option.dataset.nome = p.nome; 
-                select.appendChild(option);
-            }
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = `${p.nome} - Saldo: ${p.qtd} un.`; 
+            option.dataset.nome = p.nome; 
+            select.appendChild(option);
         });
 
-        // ATIVA A BARRA DE PESQUISA (Select2)
         if(typeof $ !== 'undefined') {
             $('#selectPecaLinha').select2();
         }
@@ -602,7 +611,8 @@ if (btnExportarExcel) {
                     "Data do Envio": dataFormatada || "N/A",
                     "Linha de Produção": e.linha,
                     "Descrição da Peça": e.peca,
-                    "Quantidade Enviada": e.quantidade
+                    "Quantidade Enviada": e.quantidade,
+                    "Corte Extra?": e.isExtra ? "Sim" : "Não" // NOVA COLUNA NO EXCEL
                 };
             });
 
