@@ -383,17 +383,16 @@ window.removerPecaCatalogo = function(id_peca) {
         });
     }
 };
-
 // ==========================================
 // LÓGICA DE PEDIDOS EXTRAS (Produção -> Estoque -> Serra)
 // ==========================================
 const formPedidoExtra = document.getElementById('formPedidoExtra');
 const tabelaTriagemEstoque = document.getElementById('tabelaTriagemEstoque'); 
 const tabelaPedidosExtras = document.getElementById('tabelaPedidosExtras'); 
+const filtroDataPedidos = document.getElementById('filtroDataPedidos');
 
 let listaPedidosExtras = JSON.parse(localStorage.getItem('pedidos_extras_salvos')) || [];
 
-// NOVA FUNÇÃO: Puxa o catálogo da nuvem para popular o dropdown de pedidos extras
 async function carregarDropdownPedidosExtras() {
     const selectExtra = document.getElementById('extraPeca');
     if (!selectExtra) return;
@@ -404,15 +403,13 @@ async function carregarDropdownPedidosExtras() {
         
         selectExtra.innerHTML = '<option value="">Selecione uma peça...</option>';
 
-        // Insere as peças. Diferente do envio para linha, aqui mostramos o Saldo
         pecas.forEach(p => {
             const option = document.createElement('option');
-            option.value = p.nome; // Salvamos o nome da peça direto como valor
+            option.value = p.nome; 
             option.textContent = `${p.nome} - Saldo Atual: ${p.qtd} un.`; 
             selectExtra.appendChild(option);
         });
 
-        // Ativa a barra de pesquisa bonita do Select2
         if(typeof $ !== 'undefined') {
             $('#extraPeca').select2();
         }
@@ -423,7 +420,6 @@ async function carregarDropdownPedidosExtras() {
 }
 
 if (formPedidoExtra) {
-    // Roda a função de carregar o catálogo logo que a página abre
     carregarDropdownPedidosExtras();
 
     formPedidoExtra.addEventListener('submit', function(event) {
@@ -441,7 +437,8 @@ if (formPedidoExtra) {
         
         const novoPedido = { 
             id: `EXT-${Math.floor(Math.random() * 9000) + 1000}`, 
-            linha: linhaSolicitante, // Salva a linha solicitante no registro
+            data_pedido: obterDataLocalISO(), // Grava a data do pedido
+            linha: linhaSolicitante, 
             peca: pecaSelecionada, 
             qtd: parseInt(document.getElementById('extraQtd').value), 
             motivo: motivo, 
@@ -453,34 +450,108 @@ if (formPedidoExtra) {
         alert(`Pedido ${novoPedido.id} da linha ${linhaSolicitante} enviado para avaliação do Estoque!`);
         
         formPedidoExtra.reset();
-        // Limpa a barra de pesquisa
         if(typeof $ !== 'undefined') $('#extraPeca').val(null).trigger('change'); 
     });
 }
 
 if (tabelaTriagemEstoque) {
+    if (filtroDataPedidos) {
+        filtroDataPedidos.value = obterDataLocalISO();
+        filtroDataPedidos.addEventListener('change', renderizarTriagemEstoque);
+    }
     renderizarTriagemEstoque();
+
     function renderizarTriagemEstoque() {
         tabelaTriagemEstoque.innerHTML = '';
-        listaPedidosExtras.forEach((pedido, index) => {
+        const dataSelecionada = filtroDataPedidos ? filtroDataPedidos.value : obterDataLocalISO();
+        
+        // Filtra pela data (Se for um pedido muito antigo e não tiver data, assume a de hoje provisoriamente)
+        const listaFiltrada = listaPedidosExtras.filter(p => {
+            const dataItem = p.data_pedido || obterDataLocalISO();
+            return dataItem === dataSelecionada;
+        });
+
+        if (listaFiltrada.length === 0) {
+            const dataFormatada = dataSelecionada.split('-').reverse().join('/');
+            tabelaTriagemEstoque.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #7f8c8d;">Nenhum pedido extra registrado para o dia ${dataFormatada}.</td></tr>`;
+            return;
+        }
+
+        listaFiltrada.forEach((pedido) => {
+            const realIndex = listaPedidosExtras.findIndex(p => p.id === pedido.id);
             const tr = document.createElement('tr');
             let botoesAcao = '';
             
-            if (pedido.status === 'Pendente no Estoque') botoesAcao = `<button class="btn-primary" style="background-color: #2ecc71; padding: 6px; margin: 2px; font-size: 12px;" onclick="atualizarPedidoExtra(${index}, 'Atendido pelo Estoque')">Fornecer do Estoque</button><button class="btn-primary" style="background-color: #e74c3c; padding: 6px; margin: 2px; font-size: 12px;" onclick="atualizarPedidoExtra(${index}, 'Enviado para Serra')">Solicitar à Serra</button>`;
-            else if (pedido.status === 'Cortado pela Serra') botoesAcao = `<button class="btn-primary" style="background-color: #3498db; padding: 6px;" onclick="atualizarPedidoExtra(${index}, 'Repassado à Produção')">Repassar à Produção</button>`;
+            if (pedido.status === 'Pendente no Estoque') botoesAcao = `<button class="btn-primary" style="background-color: #2ecc71; padding: 6px; margin: 2px; font-size: 12px;" onclick="atualizarPedidoExtra(${realIndex}, 'Atendido pelo Estoque')">Fornecer do Estoque</button><button class="btn-primary" style="background-color: #e74c3c; padding: 6px; margin: 2px; font-size: 12px;" onclick="atualizarPedidoExtra(${realIndex}, 'Enviado para Serra')">Solicitar à Serra</button>`;
+            else if (pedido.status === 'Cortado pela Serra') botoesAcao = `<button class="btn-primary" style="background-color: #3498db; padding: 6px;" onclick="atualizarPedidoExtra(${realIndex}, 'Repassado à Produção')">Repassar à Produção</button>`;
             else { botoesAcao = `<span style="color: #7f8c8d;">Finalizado</span>`; tr.style.opacity = '0.6'; }
             
-            // Cria uma etiqueta bonita para mostrar a linha solicitante
             const badgeLinha = pedido.linha ? `<br><span style="font-size: 11px; background-color: #34495e; color: white; padding: 2px 4px; border-radius: 3px; display: inline-block; margin-top: 4px;">Linha: ${pedido.linha}</span>` : '';
 
             tr.innerHTML = `<td><strong>${pedido.id}</strong></td><td>${pedido.peca} ${badgeLinha}</td><td><strong style="color: #e74c3c;">${pedido.qtd}</strong></td><td style="font-size: 12px; max-width: 200px;"><em>"${pedido.motivo}"</em></td><td style="font-weight: bold;">${pedido.status}</td><td>${botoesAcao}</td>`;
             tabelaTriagemEstoque.appendChild(tr);
         });
     }
-    window.atualizarPedidoExtra = function(index, novoStatus) {
-        listaPedidosExtras[index].status = novoStatus;
-        localStorage.setItem('pedidos_extras_salvos', JSON.stringify(listaPedidosExtras));
-        renderizarTriagemEstoque();
+
+    // AGORA ESTA FUNÇÃO FAZ A MÁGICA COM O BANCO DE DADOS (ASYNC)
+    window.atualizarPedidoExtra = async function(index, novoStatus) {
+        const pedido = listaPedidosExtras[index];
+
+        try {
+            if (novoStatus === 'Atendido pelo Estoque') {
+                // 1. Acha o ID real da peça no catálogo pela descrição
+                const pecaBanco = catalogoPecas.find(p => p.nome === pedido.peca);
+                if (!pecaBanco) {
+                    alert("⚠️ Erro: Peça não encontrada no catálogo para dar baixa. Registre a saída manualmente.");
+                    return;
+                }
+
+                // 2. Dá baixa no Supabase
+                const resBaixa = await fetch('/api/pecas/movimentar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: pecaBanco.id, tipo: 'saida', quantidade: pedido.qtd })
+                });
+
+                if (!resBaixa.ok) {
+                    alert("❌ Operação negada: Estoque insuficiente para atender o pedido inteiro diretamente.");
+                    return; // Para a execução se não tem saldo
+                }
+
+                // 3. Lança no Relatório de Envios (Corte Extra = Falso)
+                await fetch('/api/envios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: pedido.qtd, is_extra: false })
+                });
+
+                alert(`✅ Pedido atendido! Peças deduzidas do estoque e lançadas na Saída de Linha.`);
+
+            } else if (novoStatus === 'Repassado à Produção') {
+                // Lança direto no Relatório de Envios (Corte Extra = Verdadeiro, não mexe no saldo)
+                await fetch('/api/envios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: pedido.qtd, is_extra: true })
+                });
+
+                alert(`✅ Repasse concluído! Peças lançadas na Saída de Linha com etiqueta [EXTRA].`);
+            }
+            
+            // Atualiza o status visual
+            pedido.status = novoStatus;
+            localStorage.setItem('pedidos_extras_salvos', JSON.stringify(listaPedidosExtras));
+            renderizarTriagemEstoque();
+            if (typeof renderizarPedidosSerra === 'function') renderizarPedidosSerra();
+            
+            // Força as tabelas da nuvem a atualizarem para exibir as novidades na hora
+            if (typeof carregarEstoqueDoBanco === 'function') carregarEstoqueDoBanco();
+            if (typeof carregarEnviosDoBanco === 'function') carregarEnviosDoBanco();
+
+        } catch (error) {
+            console.error(error);
+            alert("Erro de conexão ao processar o pedido.");
+        }
     };
 }
 
@@ -497,7 +568,6 @@ if (tabelaPedidosExtras) {
             let botaoAcao = pedido.status === 'Enviado para Serra' ? `<button class="btn-primary" style="background-color: #f39c12; padding: 6px;" onclick="concluirCorteExtra(${realIndex})">Informar Estoque: Corte Concluído</button>` : `<span style="color: #7f8c8d;">Devolvido ao Estoque</span>`;
             if (pedido.status !== 'Enviado para Serra') tr.style.opacity = '0.6';
 
-            // Mesma etiqueta da linha para a tabela da Serra
             const badgeLinha = pedido.linha ? `<br><span style="font-size: 11px; background-color: #34495e; color: white; padding: 2px 4px; border-radius: 3px; display: inline-block; margin-top: 4px;">Linha: ${pedido.linha}</span>` : '';
 
             tr.innerHTML = `<td><strong>${pedido.id}</strong></td><td>${pedido.peca} ${badgeLinha}</td><td><strong style="color: #e74c3c;">${pedido.qtd}</strong></td><td style="font-size: 12px; max-width: 200px;"><em>"${pedido.motivo}"</em></td><td style="color: #e74c3c; font-weight: bold;">${pedido.status}</td><td>${botaoAcao}</td>`;

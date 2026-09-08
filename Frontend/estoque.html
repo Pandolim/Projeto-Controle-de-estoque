@@ -186,9 +186,17 @@
         </section>
 
         <!-- Tabela de Triagem de Pedidos Extras -->
+        <!-- Tabela de Triagem de Pedidos Extras -->
         <section class="card table-card" style="margin-top: 20px; border-left: 5px solid #f39c12;">
-            <h2>Triagem de Pedidos da Produção</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h2 style="margin: 0;">Triagem de Pedidos da Produção</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label for="filtroDataPedidos" style="margin: 0; font-weight: bold; color: #34495e;">Exibindo dia:</label>
+                    <input type="date" id="filtroDataPedidos" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </div>
+            </div>
             <table class="estoque-table">
+                <thead>
                 <thead>
                     <tr>
                         <th>ID Pedido</th>
