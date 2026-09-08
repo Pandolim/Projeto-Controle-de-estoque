@@ -199,7 +199,7 @@
         <!-- Tabela de Peças Enviadas para a Linha -->
 <section class="card table-card" style="margin-top: 20px; border-left: 5px solid #2980b9;">
     <h2>Lançar Peças Enviadas para a Linha</h2>
-    <form id="formPecaLinha" style="margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+   <form id="formPecaLinha" style="margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
         <div class="input-group" style="flex: 1; min-width: 200px;">
             <label for="linhaDestinoSelect">Linha de Produção</label>
             <select id="linhaDestinoSelect" required>
@@ -209,32 +209,28 @@
                 <option value="Economica">Economica</option>
                 <option value="Hibrida">Hibrida</option>
                 <option value="BUX">BUX</option>
-                <option value="Temporaria">Temporaria</option> <!-- essa opção é para oque ja esta pra la e não sabemos em qual linha -->
+                <option value="Temporaria">Temporaria</option>
             </select>
         </div>
+        
         <div class="input-group" style="flex: 2; min-width: 250px;">
-           <!-- Troque o input antigo por este select -->
-<label>Peça / Descrição</label>
-<select id="selectPecaLinha" class="form-control">
-    <option value="">Carregando peças do estoque...</option>
-</select>
+            <label>Peça / Descrição</label>
+            <select id="selectPecaLinha" class="form-control">
+                <option value="">Carregando peças do estoque...</option>
+            </select>
         </div>
-        <div class="input-group" style="flex: 1; min-width: 150px;">
-            <label for="pecaEnviadaQtd">Quantidade</label>
-            <input type="number" id="pecaEnviadaQtd" required min="1" placeholder="Ex: 50">
-        </div>
-        <div class="input-group" style="flex: 1; min-width: 150px;">
+        
+        <div class="input-group" style="flex: 1; min-width: 100px;">
             <label for="pecaEnviadaQtd">Quantidade</label>
             <input type="number" id="pecaEnviadaQtd" required min="1" placeholder="Ex: 50">
         </div>
         
-        <!-- ADICIONE ESTE BLOCO AQUI (A CAIXINHA DE PEDIDO EXTRA) -->
+        <!-- A CAIXINHA DE PEDIDO EXTRA -->
         <div class="input-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
             <input type="checkbox" id="checkPedidoExtra" style="width: 18px; height: 18px; cursor: pointer;">
             <label for="checkPedidoExtra" style="margin: 0; color: #e74c3c; font-weight: bold; cursor: pointer;">Corte na Hora (Extra)</label>
         </div>
         
-        <button type="submit" class="btn-primary" style="margin: 0; padding: 12px 20px; background-color: #2980b9;">Registrar Envio</button>
         <button type="submit" class="btn-primary" style="margin: 0; padding: 12px 20px; background-color: #2980b9;">Registrar Envio</button>
     </form>
 
