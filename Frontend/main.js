@@ -981,5 +981,22 @@ if (btnExportarExcel) {
             btnExportarExcel.disabled = false;
         }
     });
+    // ==========================================
+// LÓGICA DE ABRIR E FECHAR MÓDULOS
+// ==========================================
+window.toggleModulo = function(idConteudo, elementoHeader) {
+    const conteudo = document.getElementById(idConteudo);
+    const icone = elementoHeader.querySelector('.icone-toggle');
+
+    if (conteudo.classList.contains('aberto')) {
+        // Se está aberto, fecha
+        conteudo.classList.remove('aberto');
+        icone.textContent = '+';
+    } else {
+        // Se está fechado, abre
+        conteudo.classList.add('aberto');
+        icone.textContent = '−'; // Usando o sinal de menos
+    }
+};
 }
 carregarDropdownLinha();

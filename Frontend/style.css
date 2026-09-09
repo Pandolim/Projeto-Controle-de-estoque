@@ -355,4 +355,51 @@ select:disabled, input:disabled, button:disabled {
         width: 100%;
         min-width: 100% !important;
     }
+    /* ==========================================
+   MÓDULOS EXPANSÍVEIS (ACCORDION)
+   ========================================== */
+.modulo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa; /* Cinza bem clarinho */
+    padding: 12px 20px;
+    border-radius: 6px;
+    border: 1px solid #dfe6e9;
+    cursor: pointer;
+    margin-bottom: 5px;
+    transition: background-color 0.2s ease;
+}
+
+.modulo-header:hover {
+    background-color: #e9ecef;
+}
+
+.modulo-header h2, 
+.modulo-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #2c3e50;
+}
+
+.icone-toggle {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #3498db;
+    transition: transform 0.2s ease;
+}
+
+.modulo-conteudo {
+    display: none; /* Esconde por padrão */
+    padding: 15px;
+    border: 1px solid #dfe6e9;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    margin-bottom: 20px;
+}
+
+/* Classe que o JavaScript vai injetar para mostrar o conteúdo */
+.modulo-conteudo.aberto {
+    display: block;
+}
 }
