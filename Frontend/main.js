@@ -832,15 +832,44 @@ async function carregarDropdownLinha() {
         select.innerHTML = '<option value="">Selecione uma peça...</option>';
 
         pecas.forEach(p => {
+            const dest = p.estoqueDestino || 'Lidiane'; // Garante que tenha um destino
             const option = document.createElement('option');
             option.value = p.id;
-            option.textContent = `${p.nome} - Saldo: ${p.qtd} un.`; 
+            // 1. Adicionamos a tag (Mobly) ou (Lidiane) no texto!
+            option.textContent = `${p.nome} (${dest}) - Saldo: ${p.qtd} un.`; 
             option.dataset.nome = p.nome; 
+            
+            // 2. Cores de fallback para o HTML nativo
+            if (dest === 'Mobly') option.style.backgroundColor = '#FEBA4F';
+            else if (dest === 'Lidiane') option.style.backgroundColor = '#C6E6FB';
+
             select.appendChild(option);
         });
 
+        // 3. O "Truque" das cores no Select2 (Igual fizemos no outro!)
         if(typeof $ !== 'undefined') {
-            $('#selectPecaLinha').select2();
+            $('#selectPecaLinha').select2({
+                templateResult: function (data) {
+                    if (!data.id) return data.text;
+                    
+                    const $item = $('<span>' + data.text + '</span>');
+                    $item.css({
+                        'display': 'block',
+                        'padding': '5px 10px',
+                        'color': '#000',
+                        'border-radius': '4px',
+                        'margin-bottom': '2px'
+                    });
+                    
+                    if (data.text.includes('(Mobly)')) {
+                        $item.css('background-color', '#FEBA4F'); 
+                    } else if (data.text.includes('(Lidiane)')) {
+                        $item.css('background-color', '#C6E6FB'); 
+                    }
+                    
+                    return $item;
+                }
+            });
         }
     } catch (error) {
         console.error("Erro ao carregar peças para o envio:", error);
