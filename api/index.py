@@ -236,5 +236,56 @@ def listar_movimentacoes():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
+# ==========================================
+# ROTAS DO PCP (CATÁLOGO DE SOFÁS E RECEITAS)
+# ==========================================
+@app.route('/api/sofas', methods=['GET'])
+def listar_sofas():
+    try:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Busca os nomes e códigos únicos dos sofás direto da tabela de receitas
+        sql = text("SELECT DISTINCT codigo_interno, produto FROM receitas_sofa WHERE codigo_interno IS NOT NULL ORDER BY produto")
+        resultados = session.execute(sql).fetchall()
+        
+        lista_sofas = [{"id": str(linha[0]), "nome": str(linha[1])} for linha in resultados]
+        
+        session.close()
+        return jsonify(lista_sofas), 200
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/receitas/<id_sofa>', methods=['GET'])
+def obter_receita(id_sofa):
+    try:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Puxa a receita do sofá e cruza com o catálogo de peças usando o "peca_id"
+        sql = text("""
+            SELECT r.peca_id, r.qtd, e.nome, e.comprimento_d1, e.largura_d2, e.espessura_d3 
+            FROM receitas_sofa r
+            LEFT JOIN estoque_pecas e ON r.peca_id = e.id_peca
+            WHERE r.codigo_interno = :id_sofa
+        """)
+        resultados = session.execute(sql, {'id_sofa': id_sofa}).fetchall()
+        
+        receita = []
+        for linha in resultados:
+            receita.append({
+                "peca_id": linha[0],
+                "qtd": linha[1],
+                "nome_peca": linha[2] or "Peça não encontrada no catálogo",
+                "d1": linha[3] or 0,
+                "d2": linha[4] or 0,
+                "d3": linha[5] or 0
+            })
+            
+        session.close()
+        return jsonify(receita), 200
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 if __name__ == '__main__':
     app.run()
