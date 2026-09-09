@@ -275,14 +275,15 @@ if (tabelaEstoqueGeral || formCadPeca) {
             });
         });
     }
-
+}
     if (formMovEstoque) {
         formMovEstoque.addEventListener('submit', function(event) {
             event.preventDefault();
             const payload = {
                 id: selectPecaEstoque.value,
                 tipo: document.getElementById('movTipo').value,
-                quantidade: parseInt(document.getElementById('movQtd').value)
+                quantidade: parseInt(document.getElementById('movQtd').value),
+                usuario: localStorage.getItem('usuarioLogado') || 'Não Registrado' // <-- Capturando o usuário!
             };
 
             fetch('/api/pecas/movimentar', {
@@ -300,7 +301,6 @@ if (tabelaEstoqueGeral || formCadPeca) {
             });
         });
     }
-}
 
 function carregarEstoqueDoBanco() {
     if (!tabelaEstoqueGeral) return;
@@ -525,12 +525,19 @@ if (tabelaTriagemEstoque) {
                     return; 
                 }
 
-                // 3. Lança no Relatório de Envios 
-                await fetch('/api/envios', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: qtdFornecida, is_extra: false })
-                });
+              // 3. Lança no Relatório de Envios 
+            await fetch('/api/envios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    data_envio: obterDataLocalISO(), 
+                    linha: pedido.linha, 
+                    peca: pedido.peca, 
+                    quantidade: qtdFornecida, 
+                    is_extra: false,
+                    usuario: localStorage.getItem('usuarioLogado') || 'Não Registrado' // <-- Capturando o usuário aqui!
+                })
+            });
 
                 pedido.qtd = qtdFornecida; // Atualiza no visual da tela
                 alert(`✅ Pedido atendido! ${qtdFornecida} peças deduzidas do estoque e lançadas na Saída de Linha.`);
@@ -543,12 +550,19 @@ if (tabelaTriagemEstoque) {
                 let qtdFornecida = parseInt(qtdInput);
                 if (isNaN(qtdFornecida) || qtdFornecida <= 0) { alert("Quantidade inválida!"); return; }
 
-                // Lança direto no Relatório de Envios (Corte Extra)
-                await fetch('/api/envios', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data_envio: obterDataLocalISO(), linha: pedido.linha, peca: pedido.peca, quantidade: qtdFornecida, is_extra: true })
-                });
+               // Lança direto no Relatório de Envios (Corte Extra)
+            await fetch('/api/envios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    data_envio: obterDataLocalISO(), 
+                    linha: pedido.linha, 
+                    peca: pedido.peca, 
+                    quantidade: qtdFornecida, 
+                    is_extra: true,
+                    usuario: localStorage.getItem('usuarioLogado') || 'Não Registrado' // <-- Usuário adicionado aqui também!
+                })
+            });
 
                 pedido.qtd = qtdFornecida; // Atualiza visual
                 alert(`✅ Repasse concluído! ${qtdFornecida} peças lançadas na Saída de Linha com etiqueta [EXTRA].`);
@@ -815,10 +829,15 @@ if (btnExportarExcel) {
             btnExportarExcel.textContent = "⏳ Gerando Relatório...";
             btnExportarExcel.disabled = true;
 
+            // 1. Busca os dados de Estoque
             const response = await fetch('/api/pecas');
             const pecas = await response.json();
 
-            // Puxa a lista direto da memória atualizada pela nuvem
+            // 2. NOVO: Busca os dados de Movimentações Manuais 
+            const responseMov = await fetch('/api/movimentacoes');
+            const movimentacoes = await responseMov.json();
+
+            // Puxa a lista de envios da memória
             const enviosSalvos = listaPecasNaLinha; 
 
             const dadosEstoque = pecas.map(p => ({
@@ -842,7 +861,28 @@ if (btnExportarExcel) {
                     "Linha de Produção": e.linha,
                     "Descrição da Peça": e.peca,
                     "Quantidade Enviada": e.quantidade,
-                    "Corte Extra?": e.is_extra ? "Sim" : "Não"
+                    "Corte Extra?": e.is_extra ? "Sim" : "Não",
+                    "Usuário Responsável": e.usuario || "Não Registrado" // <-- Adicionamos a coluna do usuário aqui!
+                };
+            });
+
+            // 3. NOVO: Formatando a 3ª Aba (Movimentações Manuais)
+            const dadosMovimentacoes = movimentacoes.map(m => {
+                let dataHora = m.data_movimento;
+                if (dataHora) {
+                    const dateObj = new Date(dataHora);
+                    if (!isNaN(dateObj)) {
+                        // Formata para o padrão brasileiro (Ex: 09/09/2026, 14:30:00)
+                        dataHora = dateObj.toLocaleString('pt-BR');
+                    }
+                }
+                return {
+                    "Data e Hora": dataHora || "N/A",
+                    "Usuário Responsável": m.usuario || "Não Registrado",
+                    "Peça Movimentada": m.peca,
+                    "Tipo de Movimento": m.tipo === 'entrada' ? 'Entrada (+)' : 'Saída (-)',
+                    "Quantidade": m.quantidade,
+                    "Estoque Afetado": m.estoque_destino || 'Lidiane'
                 };
             });
 
@@ -853,6 +893,10 @@ if (btnExportarExcel) {
 
             const worksheetEnvios = XLSX.utils.json_to_sheet(dadosEnvios);
             XLSX.utils.book_append_sheet(workbook, worksheetEnvios, "Envios p_ Linha");
+
+            // 4. NOVO: Anexando a 3ª aba no arquivo final do Excel
+            const worksheetMovimentacoes = XLSX.utils.json_to_sheet(dadosMovimentacoes);
+            XLSX.utils.book_append_sheet(workbook, worksheetMovimentacoes, "Movimentações Manuais");
 
             const dataHoje = new Date().toISOString().split('T')[0].split('-').reverse().join('-');
             XLSX.writeFile(workbook, `Relatorio_Geral_Estoque_${dataHoje}.xlsx`);
@@ -866,5 +910,4 @@ if (btnExportarExcel) {
         }
     });
 }
-
 carregarDropdownLinha();
