@@ -20,18 +20,20 @@ class Sofa(Base):
     receita_pecas = relationship("ReceitaSofa", back_populates="sofa", cascade="all, delete-orphan")
 
 class ReceitaSofa(Base):
-    """Armazena a explosão de materiais (BOM). Cada linha aqui é uma peça do sofá."""
+    """Armazena a explosão de materiais (BOM). Cada linha aqui aponta para uma peça do estoque."""
     __tablename__ = 'receitas_sofa'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     sofa_id = Column(String, ForeignKey('sofas.id_codigo'))
     
-    comprimento_d1 = Column(Integer, nullable=False) # em mm
-    largura_d2 = Column(Integer, nullable=False)     # em mm
-    espessura_d3 = Column(Integer, default=25)       # Cravado em 25mm
-    quantidade = Column(Integer, nullable=False)     # Qtd desta peça para 1 sofá
+    # NOVA COLUNA: Aponta diretamente para o ID único da peça no estoque (Ex: PEC-1024)
+    peca_id = Column(String, ForeignKey('estoque_pecas.id_peca'))
     
+    quantidade = Column(Integer, nullable=False) # Qtd desta peça para 1 sofá
+    
+    # Relacionamentos (Facilitam a busca do Python)
     sofa = relationship("Sofa", back_populates="receita_pecas")
+    peca = relationship("EstoquePeca")
 
 # ==========================================
 # BLOCO 2: OPERAÇÃO DINÂMICA (Chão de Fábrica)
