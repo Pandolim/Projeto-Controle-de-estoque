@@ -316,11 +316,41 @@ function carregarEstoqueDoBanco() {
             const opt = document.createElement('option');
             opt.value = peca.id;
             opt.textContent = `${peca.nome} (${dest}) - Saldo: ${peca.qtd}`;
+            
+            // Garantia: Pinta a opção nativa caso o Select2 falhe em carregar
+            if (dest === 'Mobly') opt.style.backgroundColor = '#FEBA4F';
+            else if (dest === 'Lidiane') opt.style.backgroundColor = '#C6E6FB';
+            
             selectPecaEstoque.appendChild(opt);
         });
 
+        // Configuração especial do Select2 para injetar as cores do seu coordenador
         if(typeof $ !== 'undefined') {
-            $('#selectPecaEstoque').select2();
+            $('#selectPecaEstoque').select2({
+                templateResult: function (data) {
+                    // Ignora o item vazio de placeholder ("Selecione uma peça...")
+                    if (!data.id) return data.text;
+                    
+                    // Cria uma caixinha virtual para cada item da lista
+                    const $item = $('<span>' + data.text + '</span>');
+                    $item.css({
+                        'display': 'block',
+                        'padding': '5px 10px',
+                        'color': '#000', // Texto escuro para dar contraste
+                        'border-radius': '4px',
+                        'margin-bottom': '2px'
+                    });
+                    
+                    // Pinta o fundo de acordo com a palavra encontrada no texto
+                    if (data.text.includes('(Mobly)')) {
+                        $item.css('background-color', '#FEBA4F'); // Laranja Pastel
+                    } else if (data.text.includes('(Lidiane)')) {
+                        $item.css('background-color', '#C6E6FB'); // Azul Ártico
+                    }
+                    
+                    return $item;
+                }
+            });
         }
 
         // Chama a função que desenha a tabela filtrada
