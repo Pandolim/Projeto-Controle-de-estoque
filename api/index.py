@@ -94,6 +94,8 @@ def movimentar_peca():
         dados = request.json
         Session = sessionmaker(bind=engine)
         session = Session()
+        
+        # 1. Atualiza o saldo no estoque
         peca = session.query(EstoquePeca).filter_by(id_peca=dados['id']).first()
         if not peca:
             return jsonify({"erro": "Peça não encontrada"}), 404
@@ -104,6 +106,20 @@ def movimentar_peca():
             if int(dados['quantidade']) > peca.quantidade:
                 return jsonify({"erro": "Estoque insuficiente"}), 400
             peca.quantidade -= int(dados['quantidade'])
+            
+        # 2. NOVO: Salva o log de auditoria
+        usuario_logado = dados.get('usuario', 'Não Registrado')
+        sql_log = text("""
+            INSERT INTO historico_movimentacoes (usuario, peca, tipo, quantidade, estoque_destino) 
+            VALUES (:usuario, :peca, :tipo, :quantidade, :estoque_destino)
+        """)
+        session.execute(sql_log, {
+            'usuario': usuario_logado,
+            'peca': peca.nome,
+            'tipo': dados['tipo'],
+            'quantidade': int(dados['quantidade']),
+            'estoque_destino': peca.estoque_destino
+        })
         
         session.commit()
         session.close()
@@ -136,17 +152,17 @@ def gerenciar_envios():
             Session = sessionmaker(bind=engine)
             session = Session()
             
-            # Salva o novo envio no Supabase
             sql = text("""
-                INSERT INTO historico_envios (data_envio, linha, peca, quantidade, is_extra) 
-                VALUES (:data_envio, :linha, :peca, :quantidade, :is_extra)
+                INSERT INTO historico_envios (data_envio, linha, peca, quantidade, is_extra, usuario) 
+                VALUES (:data_envio, :linha, :peca, :quantidade, :is_extra, :usuario)
             """)
             session.execute(sql, {
                 'data_envio': dados['data_envio'],
                 'linha': dados['linha'],
                 'peca': dados['peca'],
                 'quantidade': dados['quantidade'],
-                'is_extra': dados.get('is_extra', False)
+                'is_extra': dados.get('is_extra', False),
+                'usuario': dados.get('usuario', 'Não Registrado') # <-- Pegando o usuário
             })
             session.commit()
             session.close()
@@ -159,8 +175,8 @@ def gerenciar_envios():
             Session = sessionmaker(bind=engine)
             session = Session()
             
-            # Busca todos os envios ordenados do mais recente pro mais antigo
-            sql = text("SELECT id, data_envio, linha, peca, quantidade, is_extra FROM historico_envios ORDER BY id DESC")
+            # Trazendo o usuário na busca
+            sql = text("SELECT id, data_envio, linha, peca, quantidade, is_extra, usuario FROM historico_envios ORDER BY id DESC")
             resultados = session.execute(sql).fetchall()
             
             lista_envios = []
@@ -171,7 +187,8 @@ def gerenciar_envios():
                     'linha': linha[2],
                     'peca': linha[3],
                     'quantidade': linha[4],
-                    'is_extra': linha[5]
+                    'is_extra': linha[5],
+                    'usuario': linha[6] # <-- Adicionando no retorno da API
                 })
             
             session.close()
@@ -190,6 +207,32 @@ def deletar_envio(id_envio):
         session.commit()
         session.close()
         return jsonify({'status': 'sucesso'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/movimentacoes', methods=['GET'])
+def listar_movimentacoes():
+    try:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        sql = text("SELECT id, data_movimento, usuario, peca, tipo, quantidade, estoque_destino FROM historico_movimentacoes ORDER BY data_movimento DESC")
+        resultados = session.execute(sql).fetchall()
+        
+        lista = []
+        for linha in resultados:
+            lista.append({
+                'id': linha[0],
+                'data_movimento': str(linha[1]) if linha[1] else None,
+                'usuario': linha[2],
+                'peca': linha[3],
+                'tipo': linha[4],
+                'quantidade': linha[5],
+                'estoque_destino': linha[6]
+            })
+            
+        session.close()
+        return jsonify(lista), 200
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
