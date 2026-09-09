@@ -829,17 +829,16 @@ if (btnExportarExcel) {
             btnExportarExcel.textContent = "⏳ Gerando Relatório...";
             btnExportarExcel.disabled = true;
 
-            // 1. Busca os dados de Estoque
+            // 1. Busca os dados de Estoque e Movimentações
             const response = await fetch('/api/pecas');
             const pecas = await response.json();
 
-            // 2. NOVO: Busca os dados de Movimentações Manuais 
             const responseMov = await fetch('/api/movimentacoes');
             const movimentacoes = await responseMov.json();
 
-            // Puxa a lista de envios da memória
             const enviosSalvos = listaPecasNaLinha; 
 
+            // Aba 1: Estoque Atual
             const dadosEstoque = pecas.map(p => ({
                 "Código/ID": p.id,
                 "Descrição da Peça": p.nome,
@@ -850,29 +849,42 @@ if (btnExportarExcel) {
                 "Saldo Atual": p.qtd
             }));
 
+            // Aba 2: Envios p/ Linha (Agora com Hora e Estoque Afetado)
             const dadosEnvios = enviosSalvos.map(e => {
-                let dataFormatada = e.data_envio;
-                if (dataFormatada && dataFormatada.includes('-')) {
-                    dataFormatada = dataFormatada.split('-').reverse().join('/');
+                let dataHoraEnvio = e.data_envio;
+                
+                // Tenta formatar para pegar Data e Hora completas
+                if (dataHoraEnvio) {
+                    const dateObj = new Date(dataHoraEnvio);
+                    if (!isNaN(dateObj) && dataHoraEnvio.includes('T')) {
+                        dataHoraEnvio = dateObj.toLocaleString('pt-BR');
+                    } else if (dataHoraEnvio.includes('-')) {
+                        // Se for um registro muito antigo apenas com YYYY-MM-DD
+                        dataHoraEnvio = dataHoraEnvio.split('-').reverse().join('/');
+                    }
                 }
                 
+                // Cruza o nome da peça com o catálogo para descobrir o estoque de origem
+                const pecaCatalogo = pecas.find(p => p.nome === e.peca);
+                const estoqueAfetado = pecaCatalogo && pecaCatalogo.estoqueDestino ? pecaCatalogo.estoqueDestino : 'Lidiane';
+                
                 return {
-                    "Data do Envio": dataFormatada || "N/A",
+                    "Data e Hora": dataHoraEnvio || "N/A",
                     "Linha de Produção": e.linha,
                     "Descrição da Peça": e.peca,
+                    "Estoque Afetado": estoqueAfetado,
                     "Quantidade Enviada": e.quantidade,
                     "Corte Extra?": e.is_extra ? "Sim" : "Não",
-                    "Usuário Responsável": e.usuario || "Não Registrado" // <-- Adicionamos a coluna do usuário aqui!
+                    "Usuário Responsável": e.usuario || "Não Registrado"
                 };
             });
 
-            // 3. NOVO: Formatando a 3ª Aba (Movimentações Manuais)
+            // Aba 3: Movimentações do Estoque (Nomes e Termos ajustados)
             const dadosMovimentacoes = movimentacoes.map(m => {
                 let dataHora = m.data_movimento;
                 if (dataHora) {
                     const dateObj = new Date(dataHora);
                     if (!isNaN(dateObj)) {
-                        // Formata para o padrão brasileiro (Ex: 09/09/2026, 14:30:00)
                         dataHora = dateObj.toLocaleString('pt-BR');
                     }
                 }
@@ -880,12 +892,13 @@ if (btnExportarExcel) {
                     "Data e Hora": dataHora || "N/A",
                     "Usuário Responsável": m.usuario || "Não Registrado",
                     "Peça Movimentada": m.peca,
-                    "Tipo de Movimento": m.tipo === 'entrada' ? 'Entrada (+)' : 'Saída (-)',
+                    "Tipo de Movimento": m.tipo === 'entrada' ? 'Entrada no Estoque' : 'Saída do Estoque',
                     "Quantidade": m.quantidade,
                     "Estoque Afetado": m.estoque_destino || 'Lidiane'
                 };
             });
 
+            // Monta o arquivo e as abas
             const workbook = XLSX.utils.book_new();
 
             const worksheetEstoque = XLSX.utils.json_to_sheet(dadosEstoque);
@@ -894,9 +907,9 @@ if (btnExportarExcel) {
             const worksheetEnvios = XLSX.utils.json_to_sheet(dadosEnvios);
             XLSX.utils.book_append_sheet(workbook, worksheetEnvios, "Envios p_ Linha");
 
-            // 4. NOVO: Anexando a 3ª aba no arquivo final do Excel
             const worksheetMovimentacoes = XLSX.utils.json_to_sheet(dadosMovimentacoes);
-            XLSX.utils.book_append_sheet(workbook, worksheetMovimentacoes, "Movimentações Manuais");
+            // Nome da aba atualizado
+            XLSX.utils.book_append_sheet(workbook, worksheetMovimentacoes, "Movimentações do Estoque");
 
             const dataHoje = new Date().toISOString().split('T')[0].split('-').reverse().join('-');
             XLSX.writeFile(workbook, `Relatorio_Geral_Estoque_${dataHoje}.xlsx`);
