@@ -6,10 +6,9 @@
     <title>Painel PCP - Gestão de Produção</title>
     <link rel="stylesheet" href="style.css">
     
-    <!-- 1. Importação do CSS do Select2 -->
+    <!-- Importação do CSS do Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        /* Ajuste fino para o Select2 encaixar perfeitamente no seu layout */
         .select2-container .select2-selection--single {
             height: 38px;
             border: 1px solid #ccc;
@@ -33,38 +32,42 @@
 
     <main class="dashboard-container">
         
-        <!-- SEÇÃO DE MACRO-LINHAS REMOVIDA DAQUI -->
+        <!-- A SEÇÃO DE MACRO-LINHAS VOLTOU! -->
+        <section class="card">
+            <h2>Linhas de Produção (Macro)</h2>
+            <div class="tabs-container" id="tabsLinhas">
+                <!-- Os botões serão gerados via JavaScript -->
+            </div>
+        </section>
 
         <div class="grid-entradas">
             <!-- Coluna 1: Gerar Nova Ordem de Produção -->
             <section class="card manual-card">
                 <h2>Lançar Nova O.P.</h2>
-                <p style="color: #666; margin-bottom: 15px;">Pesquise e selecione qualquer produto do catálogo.</p>
+                <!-- O aviso visual da linha selecionada voltou -->
+                <p>Linha selecionada: <strong id="linhaSelecionadaTexto" style="color: #3498db;">Selecione uma linha acima</strong></p>
                 
                 <form id="formOP">
                     <div class="input-group">
                         <label for="opProduto">Modelo do Produto (Sofá)</label>
-                        <!-- Removido o atributo 'disabled' -->
-                        <select id="opProduto" required style="width: 100%;">
-                            <option value="">Carregando catálogo...</option>
+                        <!-- Campos travados por padrão até a linha ser clicada -->
+                        <select id="opProduto" required style="width: 100%;" disabled>
+                            <option value="">Aguardando seleção da linha...</option>
                         </select>
                     </div>
                     
                     <div class="input-row">
                         <div class="input-group">
                             <label for="opQtd">Quantidade (Unidades)</label>
-                            <!-- Removido o atributo 'disabled' -->
-                            <input type="number" id="opQtd" required min="1" placeholder="Ex: 50">
+                            <input type="number" id="opQtd" required min="1" placeholder="Ex: 50" disabled>
                         </div>
                         <div class="input-group">
                             <label for="opData">Data Limite de Corte</label>
-                            <!-- Removido o atributo 'disabled' -->
-                            <input type="date" id="opData" required>
+                            <input type="date" id="opData" required disabled>
                         </div>
                     </div>
                     
-                    <!-- Removido o atributo 'disabled' -->
-                    <button type="submit" class="btn-primary" id="btnGerarOP">Gerar Ordem de Produção</button>
+                    <button type="submit" class="btn-primary" id="btnGerarOP" disabled>Gerar Ordem de Produção</button>
                 </form>
             </section>
 
@@ -107,13 +110,13 @@
 
     </main>
 
-    <!-- 2. Importação do jQuery e do script do Select2 (Ficam no final do body por performance) -->
+    <!-- Importação do jQuery e do Select2 -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
     <script src="main.js"></script>
 
-    <!-- 3. Ativação da barra de pesquisa -->
+    <!-- Ativação inicial da barra de pesquisa -->
     <script>
         $(document).ready(function() {
             $('#opProduto').select2({

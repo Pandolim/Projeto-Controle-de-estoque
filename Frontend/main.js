@@ -138,61 +138,114 @@ const opProduto = document.getElementById('opProduto');
 const opQtd = document.getElementById('opQtd');
 const linhaSelecionadaTexto = document.getElementById('linhaSelecionadaTexto');
 
-const linhasProducao = ["Stilo 1.0", "Stilo 2.0", "Stilo 3.0", "Economica", "Hibrida", "Desenvolvimento", "BUX"];
-const catalogoProdutos = {
-    "Economica": [{ id: "31.08.37.30", nome: "Amsterdã 1,80m (Suede Cinza)", pecasPorSofa: 42, receita: null }, { id: "31.08.37.33", nome: "Amsterdã 1,80m (Linho Bege)", pecasPorSofa: 42, receita: null }],
-    "Stilo 1.0": [{ id: "15.99.01.00", nome: "Beegees 2,20m", pecasPorSofa: 65, receita: null }, { id: "302.139.488.", nome: "SOLOMONS SOFÁ-CAMA 4L 214cm BIPARTIDO", pecasPorSofa: 130, receita: [{ qtd: 4, d1: 600, d2: 70 }, { qtd: 4, d1: 1010, d2: 70 }, { qtd: 4, d1: 970, d2: 50 }, { qtd: 4, d1: 590, d2: 70 }, { qtd: 4, d1: 550, d2: 70 }, { qtd: 2, d1: 1000, d2: 40 }] }],
-    "Hibrida": [{ id: "42.11.22.99", nome: "Athena Retrátil", pecasPorSofa: 88, receita: null }]
-};
+const linhasProducao = ["Stilo 1.0", "Stilo 2.0", "Stilo 3.0", "Economica", "Hibrida", "Desenvolvimento", "BUX", "Sem Linha Cadastrada"];
+let catalogoProdutos = {}; // Agora será preenchido pelo Banco de Dados!
 let linhaAtual = "";
 let listaOPs = JSON.parse(localStorage.getItem('ops_salvas')) || []; 
 
 if (formOP && tabsLinhas) {
     renderizarTabelaOPs();
-    linhasProducao.forEach(linha => {
-        const btn = document.createElement('button');
-        btn.className = 'tab-btn';
-        btn.textContent = linha;
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selecionarLinha(linha);
+    carregarSofasDoBanco(); // Puxa todos os dados assim que a tela abre
+
+    // Função que busca do banco e organiza os sofás nas caixinhas das linhas
+    async function carregarSofasDoBanco() {
+        try {
+            // OBS: Esta rota precisará ser criada na Vercel depois (ex: /api/sofas)
+            const response = await fetch('/api/sofas'); 
+            const sofas = await response.json();
+            
+            // Inicializa o catálogo vazio para todas as linhas
+            linhasProducao.forEach(linha => catalogoProdutos[linha] = []);
+            
+            // Distribui os sofás do banco nas suas linhas corretas
+            sofas.forEach(sofa => {
+                const nomeLinha = sofa.linha_producao || "Sem Linha Cadastrada";
+                if(catalogoProdutos[nomeLinha]) {
+                    catalogoProdutos[nomeLinha].push({
+                        id: sofa.id_codigo,
+                        nome: sofa.nome,
+                        // Simplificando o cálculo de peças para a UI por enquanto
+                        pecasPorSofa: 50 
+                    });
+                }
+            });
+            
+            construirBotoesLinhas();
+        } catch (error) {
+            console.error("Erro ao carregar os sofás do banco:", error);
+            // Fallback (mantém os antigos caso a API falhe)
+            catalogoProdutos = {
+                "Economica": [{ id: "31.08.37.30", nome: "Amsterdã 1,80m (Suede Cinza)", pecasPorSofa: 42}],
+                "Stilo 1.0": [{ id: "15.99.01.00", nome: "Beegees 2,20m", pecasPorSofa: 65}]
+            };
+            construirBotoesLinhas();
+        }
+    }
+
+    function construirBotoesLinhas() {
+        tabsLinhas.innerHTML = '';
+        linhasProducao.forEach(linha => {
+            const btn = document.createElement('button');
+            btn.className = 'tab-btn';
+            btn.textContent = linha;
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selecionarLinha(linha);
+            });
+            tabsLinhas.appendChild(btn);
         });
-        tabsLinhas.appendChild(btn);
-    });
+    }
 
     function selecionarLinha(linha) {
         linhaAtual = linha;
         linhaSelecionadaTexto.textContent = linha;
         opProduto.disabled = false; opQtd.disabled = false; document.getElementById('opData').disabled = false; document.getElementById('btnGerarOP').disabled = false;
-        opProduto.innerHTML = '<option value="">Selecione um modelo...</option>';
+        
+        opProduto.innerHTML = '<option value="">Digite o código ou nome do sofá...</option>';
         const produtosDaLinha = catalogoProdutos[linha] || [];
-        if (produtosDaLinha.length === 0) { opProduto.innerHTML = '<option value="">Nenhum produto cadastrado nesta linha</option>'; opProduto.disabled = true; return; }
+        
+        if (produtosDaLinha.length === 0) { 
+            opProduto.innerHTML = '<option value="">Nenhum produto cadastrado nesta linha</option>'; 
+            opProduto.disabled = true; 
+            // Atualiza o visual do Select2
+            if(typeof $ !== 'undefined') $('#opProduto').trigger('change');
+            return; 
+        }
+        
         produtosDaLinha.forEach(prod => {
             const opt = document.createElement('option');
-            opt.value = prod.id; opt.dataset.pecas = prod.pecasPorSofa; opt.textContent = `${prod.id} - ${prod.nome}`;
+            opt.value = prod.id; 
+            opt.dataset.pecas = prod.pecasPorSofa; 
+            opt.textContent = `${prod.id} - ${prod.nome}`;
             opProduto.appendChild(opt);
         });
+        
+        // Avisa ao jQuery/Select2 que a lista interna mudou e ele precisa se redesenhar
+        if(typeof $ !== 'undefined') {
+            $('#opProduto').val(null).trigger('change');
+        }
     }
 
     opQtd.addEventListener('input', calcularPreview);
-    opProduto.addEventListener('change', calcularPreview);
+    if(typeof $ !== 'undefined') {
+        // O Select2 muda o evento de "change", então escutamos pelo jQuery
+        $('#opProduto').on('change', calcularPreview);
+    } else {
+        opProduto.addEventListener('change', calcularPreview);
+    }
 
     function calcularPreview() {
         const qtdSofas = parseInt(opQtd.value) || 0;
-        const select = opProduto.options[opProduto.selectedIndex];
-        if (qtdSofas > 0 && select && select.value !== "") {
-            const produtoCompleto = catalogoProdutos[linhaAtual].find(p => p.id === select.value);
-            const total = produtoCompleto.pecasPorSofa * qtdSofas;
+        const selectValue = opProduto.value;
+        const optionSelecionada = opProduto.options[opProduto.selectedIndex];
+        
+        if (qtdSofas > 0 && selectValue !== "") {
+            const pecasPorSofa = optionSelecionada ? parseInt(optionSelecionada.dataset.pecas) : 0;
+            const total = pecasPorSofa * qtdSofas;
+            
             document.getElementById('previewBOM').classList.replace('resultado-oculto', 'resultado-visivel');
-            if (produtoCompleto.receita) {
-                let htmlReceita = `<ul style="max-height: 200px; overflow-y: auto; padding-left: 20px; font-size: 14px; color: #34495e;">`;
-                produtoCompleto.receita.forEach(item => { htmlReceita += `<li style="margin-bottom: 4px;"><strong>${item.qtd * qtdSofas}x</strong> - Peça ${item.d1}mm x ${item.d2}mm</li>`; });
-                htmlReceita += `</ul>`;
-                document.getElementById('listaPecasPreview').innerHTML = htmlReceita;
-            } else {
-                document.getElementById('listaPecasPreview').innerHTML = `<li><strong>Caixas:</strong> ${(total * 0.4).toFixed(0)} peças</li><li><strong>Encostos:</strong> ${(total * 0.3).toFixed(0)} peças</li><li><strong>Assentos:</strong> ${(total * 0.3).toFixed(0)} peças</li>`;
-            }
+            document.getElementById('listaPecasPreview').innerHTML = `<li><strong>Madeira Estrutural Estimada:</strong> ${(total * 0.8).toFixed(0)} peças</li>`;
             document.getElementById('totalPecasPreview').textContent = total;
         } else {
             document.getElementById('previewBOM').classList.replace('resultado-visivel', 'resultado-oculto');
@@ -201,14 +254,26 @@ if (formOP && tabsLinhas) {
     
     formOP.addEventListener('submit', function(event) {
         event.preventDefault();
-        const select = opProduto.options[opProduto.selectedIndex];
+        const optionSelecionada = opProduto.options[opProduto.selectedIndex];
         const qtdSofas = parseInt(opQtd.value);
-        const novaOP = { numero: `OP-${Math.floor(Math.random() * 10000)}`, linha: linhaAtual, produto: select.textContent, quantidade: qtdSofas, pecas: parseInt(select.dataset.pecas) * qtdSofas, status: 'Pendente na Serra' };
+        
+        const novaOP = { 
+            numero: `OP-${Math.floor(Math.random() * 10000)}`, 
+            linha: linhaAtual, 
+            produto: optionSelecionada.textContent, 
+            quantidade: qtdSofas, 
+            pecas: parseInt(optionSelecionada.dataset.pecas) * qtdSofas, 
+            status: 'Pendente na Serra' 
+        };
+        
         listaOPs.unshift(novaOP);
         localStorage.setItem('ops_salvas', JSON.stringify(listaOPs));
         renderizarTabelaOPs();
         alert(`Sucesso! ${novaOP.numero} enviada para a Serra.`);
-        formOP.reset(); document.getElementById('previewBOM').classList.replace('resultado-visivel', 'resultado-oculto');
+        
+        formOP.reset(); 
+        if(typeof $ !== 'undefined') $('#opProduto').val(null).trigger('change');
+        document.getElementById('previewBOM').classList.replace('resultado-visivel', 'resultado-oculto');
     });
 
     function renderizarTabelaOPs() {

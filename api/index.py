@@ -245,11 +245,17 @@ def listar_sofas():
         Session = sessionmaker(bind=engine)
         session = Session()
         
-        # Busca os nomes e códigos únicos dos sofás direto da tabela de receitas
-        sql = text("SELECT DISTINCT codigo_interno, produto FROM receitas_sofa WHERE codigo_interno IS NOT NULL ORDER BY produto")
+        # BUSCA CORRETA: Puxa diretamente da tabela de sofás as informações completas
+        sql = text("SELECT id_codigo, nome, linha_producao FROM sofas ORDER BY nome")
         resultados = session.execute(sql).fetchall()
         
-        lista_sofas = [{"id": str(linha[0]), "nome": str(linha[1])} for linha in resultados]
+        lista_sofas = []
+        for linha in resultados:
+            lista_sofas.append({
+                "id_codigo": str(linha[0]),
+                "nome": str(linha[1]),
+                "linha_producao": str(linha[2]) if linha[2] else None
+            })
         
         session.close()
         return jsonify(lista_sofas), 200
@@ -296,11 +302,9 @@ from sincronizador import executar_sincronizacao
 @app.route('/api/cron/sincronizar', methods=['GET', 'POST'])
 def cron_sincronizar():
     try:
-        # Aciona o robô sem enviar parâmetros (ele já sabe o que fazer)
         resposta, status_code = executar_sincronizacao()
         return jsonify(resposta), status_code
     except Exception as e:
-        # Se algo der errado, mostramos o erro exato na tela em vez de uma página genérica
         return jsonify({"erro_interno": str(e)}), 500
     
 if __name__ == '__main__':
