@@ -295,12 +295,13 @@ from sincronizador import executar_sincronizacao
 # ==========================================
 @app.route('/api/cron/sincronizar', methods=['GET', 'POST'])
 def cron_sincronizar():
-    # Aqui colocaremos o link exato de exportação do seu Google Sheets
-    url_planilha = "COLE_SEU_LINK_AQUI" 
+    try:
+        # Aciona o robô sem enviar parâmetros (ele já sabe o que fazer)
+        resposta, status_code = executar_sincronizacao()
+        return jsonify(resposta), status_code
+    except Exception as e:
+        # Se algo der errado, mostramos o erro exato na tela em vez de uma página genérica
+        return jsonify({"erro_interno": str(e)}), 500
     
-    # Aciona o robô e devolve o resultado
-    resposta, status_code = executar_sincronizacao(url_planilha)
-    return jsonify(resposta), status_code
-
 if __name__ == '__main__':
     app.run()
