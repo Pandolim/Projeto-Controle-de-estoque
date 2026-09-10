@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel PCP - Gestão de Produção</title>
     <link rel="stylesheet" href="style.css">
+    
+    <!-- 1. Importação do CSS do Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        /* Ajuste fino para o Select2 encaixar perfeitamente no seu layout */
+        .select2-container .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+    </style>
 </head>
 <body class="dashboard-body">
     
@@ -15,44 +30,41 @@
             <a href="login.html" class="btn-sair">Sair</a>
         </div>
     </header>
-    </header>
 
     <main class="dashboard-container">
         
-        <!-- Filtro por Linhas de Produção (MACRO) -->
-        <section class="card">
-            <h2>Linhas de Produção (Macro)</h2>
-            <div class="tabs-container" id="tabsLinhas">
-                <!-- Os botões serão gerados via JavaScript -->
-            </div>
-        </section>
+        <!-- SEÇÃO DE MACRO-LINHAS REMOVIDA DAQUI -->
 
         <div class="grid-entradas">
             <!-- Coluna 1: Gerar Nova Ordem de Produção -->
             <section class="card manual-card">
                 <h2>Lançar Nova O.P.</h2>
-                <p>Linha selecionada: <strong id="linhaSelecionadaTexto" style="color: #3498db;">Selecione uma linha</strong></p>
+                <p style="color: #666; margin-bottom: 15px;">Pesquise e selecione qualquer produto do catálogo.</p>
                 
                 <form id="formOP">
                     <div class="input-group">
                         <label for="opProduto">Modelo do Produto (Sofá)</label>
-                        <select id="opProduto" required disabled>
-                            <option value="">Selecione uma linha primeiro...</option>
+                        <!-- Removido o atributo 'disabled' -->
+                        <select id="opProduto" required style="width: 100%;">
+                            <option value="">Carregando catálogo...</option>
                         </select>
                     </div>
                     
                     <div class="input-row">
                         <div class="input-group">
                             <label for="opQtd">Quantidade (Unidades)</label>
-                            <input type="number" id="opQtd" required min="1" placeholder="Ex: 50" disabled>
+                            <!-- Removido o atributo 'disabled' -->
+                            <input type="number" id="opQtd" required min="1" placeholder="Ex: 50">
                         </div>
                         <div class="input-group">
                             <label for="opData">Data Limite de Corte</label>
-                            <input type="date" id="opData" required disabled>
+                            <!-- Removido o atributo 'disabled' -->
+                            <input type="date" id="opData" required>
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn-primary" id="btnGerarOP" disabled>Gerar Ordem de Produção</button>
+                    <!-- Removido o atributo 'disabled' -->
+                    <button type="submit" class="btn-primary" id="btnGerarOP">Gerar Ordem de Produção</button>
                 </form>
             </section>
 
@@ -95,6 +107,20 @@
 
     </main>
 
+    <!-- 2. Importação do jQuery e do script do Select2 (Ficam no final do body por performance) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
     <script src="main.js"></script>
+
+    <!-- 3. Ativação da barra de pesquisa -->
+    <script>
+        $(document).ready(function() {
+            $('#opProduto').select2({
+                placeholder: "Digite o código ou nome do sofá...",
+                allowClear: true
+            });
+        });
+    </script>
 </body>
 </html>

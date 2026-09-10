@@ -25,27 +25,24 @@ def executar_sincronizacao():
 
         print("⚡ Carregando catálogo do banco para a memória...")
         todas_pecas = session.execute(text("SELECT id_peca, comprimento_d1, largura_d2, espessura_d3, estoque_destino FROM estoque_pecas")).fetchall()
+        todos_sofas = session.execute(text("SELECT id_codigo FROM sofas")).fetchall()
         
+        sofas_conhecidos = {str(s[0]) for s in todos_sofas}
         catalogo_memoria = {(p[1], p[2], p[3], p[4]): str(p[0]) for p in todas_pecas}
         ids_usados = {str(p[0]) for p in todas_pecas} 
         
         pecas_novas = []
+        sofas_novos = [] 
         receitas_novas = []
         sofas_afetados = set()
         contador_linhas = 0
 
-        print("🔄 Cruzando dados em lote (Filtro: Apenas Eucalipto)...")
+        print("🔄 Cruzando dados em lote (Lendo TODOS os materiais)...")
         for row in leitor_csv:
             dados = dict(zip(cabecalho, row))
             codigo_sofa = str(dados.get('código interno', '')).strip()
             ins_peca = str(dados.get('ins', '')).strip().upper()
             mp_raw = str(dados.get('matéria prima', '')).lower()
-            
-            # ==========================================
-            # O NOVO FILTRO: IGNORA TUDO QUE NÃO FOR EUCALIPTO
-            # ==========================================
-            if 'eucalipto' not in mp_raw:
-                continue
             
             try:
                 qtd = int(float(str(dados.get('qtd.', '0')).replace(',', '.')))
@@ -61,7 +58,17 @@ def executar_sincronizacao():
             contador_linhas += 1
             destino_estoque = "Lidiane" if "-M" in ins_peca else "Mobly"
             
-            nome_peca_final = f"Eucalipto- {d1}x{d2}"
+            # Dinâmica de nomes de materiais!
+            prefixo = "Eucalipto"
+            if "mdf" in mp_raw: prefixo = "MDF"
+            elif "pinus" in mp_raw: prefixo = "Pinus"
+            elif "papelão" in mp_raw: prefixo = "Papelão"
+            
+            nome_peca_final = f"{prefixo}- {d1}x{d2}"
+
+            if codigo_sofa not in sofas_conhecidos:
+                sofas_conhecidos.add(codigo_sofa)
+                sofas_novos.append({'id_codigo': codigo_sofa, 'nome': f"Sofá {codigo_sofa} (Importado)"})
 
             chave_busca = (d1, d2, d3, destino_estoque)
             
@@ -84,6 +91,12 @@ def executar_sincronizacao():
 
         print("🚀 Enviando atualizações para o banco de dados...")
         
+        if sofas_novos:
+            session.execute(text("""
+                INSERT INTO sofas (id_codigo, nome) 
+                VALUES (:id_codigo, :nome)
+            """), sofas_novos)
+
         if pecas_novas:
             session.execute(text("""
                 INSERT INTO estoque_pecas (id_peca, nome, comprimento_d1, largura_d2, espessura_d3, estoque_destino, quantidade) 
@@ -101,16 +114,14 @@ def executar_sincronizacao():
             """), receitas_novas)
 
         session.commit()
-        return {"status": "sucesso", "mensagem": f"{contador_linhas} itens de Eucalipto sincronizados e {len(pecas_novas)} peças novas criadas!"}, 200
+        return {"status": "sucesso", "mensagem": f"{contador_linhas} itens (Todos os Materiais) sincronizados. {len(sofas_novos)} novos sofás e {len(pecas_novas)} peças criadas!"}, 200
 
     except Exception as e:
         session.rollback()
         return {"status": "erro", "detalhes": str(e)}, 500
     finally:
         session.close()
-# ==========================================
-# GATILHO PARA EXECUÇÃO LOCAL
-# ==========================================
+
 if __name__ == "__main__":
     resultado, status = executar_sincronizacao()
     print("\n--- RESUMO DA SINCRONIZAÇÃO ---")
