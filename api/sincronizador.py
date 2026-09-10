@@ -108,3 +108,11 @@ def executar_sincronizacao():
         return {"status": "erro", "detalhes": str(e)}, 500
     finally:
         session.close()
+# ==========================================
+# GATILHO PARA EXECUÇÃO LOCAL
+# ==========================================
+if __name__ == "__main__":
+    resultado, status = executar_sincronizacao()
+    print("\n--- RESUMO DA SINCRONIZAÇÃO ---")
+    print(f"Status Code: {status}")
+    print(f"Retorno: {resultado}")
