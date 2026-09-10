@@ -1,8 +1,26 @@
+import sys
+import os
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
-from models import engine, Sofa, ReceitaSofa
+from sqlalchemy import text
+
+# ==========================================
+# TRUQUE DE ROTEAMENTO (Para achar a pasta API)
+# ==========================================
+# Pega o caminho da pasta atual (Backend)
+diretorio_atual = os.path.dirname(os.path.abspath(__file__))
+# Volta uma pasta para trás (Projeto Controle de estoque)
+diretorio_pai = os.path.dirname(diretorio_atual)
+# Entra na pasta 'api'
+pasta_api = os.path.join(diretorio_pai, 'api')
+
+# Adiciona a pasta 'api' no radar do Python
+if pasta_api not in sys.path:
+    sys.path.append(pasta_api)
+
+# Agora ele consegue achar o models perfeitamente!
+from models import engine, Sofa, ReceitaSofa, EstoqueRetalhos
 from otimizador import calcular_cortes_1d
-from models import EstoqueRetalhos
 
 def processar_pcp_universal(arquivo_excel, linha_padrao="Geral"):
     Session = sessionmaker(bind=engine)
@@ -61,84 +79,97 @@ def processar_pcp_universal(arquivo_excel, linha_padrao="Geral"):
                 continue
                 
             codigo_base = ".".join(codigo_completo.split('.')[:3])
-            sofa_db = session.query(Sofa).filter_by(id_codigo=codigo_base).first()
             
+            # Valida se o sofá existe no banco
+            sofa_db = session.query(Sofa).filter_by(id_codigo=codigo_base).first()
             if not sofa_db:
                 continue
                 
             total_sofas_linha += qtd_sofa
             
-            receitas = session.query(ReceitaSofa).filter_by(sofa_id=codigo_base).all()
-            for peca in receitas:
-                qtd_total_peca = peca.quantidade * qtd_sofa
+            # ==========================================
+            # AQUI ESTÁ A MÁGICA DA NOVA ESTRUTURA
+            # ==========================================
+            sql = text("""
+                SELECT r.peca_id, r.quantidade, e.nome, e.comprimento_d1, e.largura_d2, e.espessura_d3 
+                FROM receitas_sofa r
+                LEFT JOIN estoque_pecas e ON r.peca_id = e.id_peca
+               WHERE r.sofa_id = :id_sofa
+            """)
+            receitas = session.execute(sql, {'id_sofa': codigo_base}).fetchall()
+            
+            for linha in receitas:
+                qtd_na_receita = int(linha[1] or 0)
+                qtd_total_peca = qtd_na_receita * qtd_sofa
                 total_pecas_cortadas += qtd_total_peca
                 
-                bitola = f"{peca.largura_d2}x{peca.espessura_d3}mm"
-                comprimento = peca.comprimento_d1
+                # Resgata as medidas cruzadas do banco de estoque
+                comprimento_d1 = int(linha[3] or 0)
+                largura_d2 = int(linha[4] or 0)
+                espessura_d3 = int(linha[5] or 0)
+                
+                bitola = f"{largura_d2}x{espessura_d3}mm"
                 
                 if bitola not in necessidade_corte:
                     necessidade_corte[bitola] = {}
-                if comprimento not in necessidade_corte[bitola]:
-                    necessidade_corte[bitola][comprimento] = 0
+                if comprimento_d1 not in necessidade_corte[bitola]:
+                    necessidade_corte[bitola][comprimento_d1] = 0
                     
-                necessidade_corte[bitola][comprimento] += qtd_total_peca
-
-       # ... (todo o código de leitura do Excel continua igual) ...
+                necessidade_corte[bitola][comprimento_d1] += qtd_total_peca
 
         # =========================================================
-        # A MÁGICA: EXIBIÇÃO DA O.P. USANDO O BANCO DE RETALHOS
+        # EXIBIÇÃO DA O.P. USANDO O BANCO DE RETALHOS (Mantido intacto)
         # =========================================================
-        print(f"==========================================")
-        print(f" 🏭 O.P. OTIMIZADA PARA A SERRA: {str(nome_real_linha).upper()} ")
-        print(f" Total de Sofás: {total_sofas_linha}")
-        print(f"==========================================")
-        
-        for bitola, comprimentos in necessidade_corte.items():
-            print(f"\n🪵 BITOLA: {bitola}")
+        if total_sofas_linha > 0:
+            print(f"==========================================")
+            print(f" 🏭 O.P. OTIMIZADA PARA A SERRA: {str(nome_real_linha).upper()} ")
+            print(f" Total de Sofás: {total_sofas_linha}")
+            print(f"==========================================")
             
-            # 1. SAQUE DO BANCO: Puxa todos os retalhos desta bitola
-            retalhos_bd = session.query(EstoqueRetalhos).filter_by(bitola=bitola).all()
-            lista_retalhos_disponiveis = [r.comprimento for r in retalhos_bd]
-            
-            # Limpa o banco temporariamente (pois estamos mandando eles para a serra)
-            session.query(EstoqueRetalhos).filter_by(bitola=bitola).delete()
-            
-            # 2. Roda a Otimização
-            padroes, total_tabuas, info_retalhos, stats = calcular_cortes_1d(
-                comprimentos, 
-                retalhos_disponiveis=lista_retalhos_disponiveis,
-                tamanho_tabua_bruta=2500
-            )
-            
-            # 3. EXIBE INSTRUÇÕES DOS RETALHOS (Se houver)
-            if info_retalhos:
-                print(f"♻️  PEGAR NO ALMOXARIFADO OS SEGUINTES RETALHOS:")
-                for r in info_retalhos:
-                    print(f"   ↳ Pegar pedaço de {r['tamanho']}mm | Fatiar: {r['cortes']} (Retalho: {r['sobra']}mm)")
-                print("-" * 40)
-            
-            # 4. EXIBE INSTRUÇÕES DAS TÁBUAS NOVAS
-            if total_tabuas > 0:
-                print(f"📦 PEGAR NO PÁTIO: {total_tabuas} tábuas brutas (2.5m)")
-                contador = 1
-                for padrao, repeticoes in padroes.items():
-                    espaco = sum(padrao) + ((len(padrao)-1)*3)
-                    sobra = 2200 - espaco # 2200 = 2500 - 300
-                    print(f"   Padrão {contador} (Repetir {repeticoes}x): Fatiar {list(padrao)} | (Retalho: {sobra}mm)")
-                    contador += 1
-            
-            # 5. DEPÓSITO NO BANCO: Salva as novas sobras geradas
-            for nova_sobra in stats['novos_retalhos']:
-                novo_registro = EstoqueRetalhos(bitola=bitola, comprimento=int(nova_sobra))
-                session.add(novo_registro)
+            for bitola, comprimentos in necessidade_corte.items():
+                print(f"\n🪵 BITOLA: {bitola}")
                 
-            print(f"   📉 Resumo de Desperdício: {stats['refugo_lixo_m']:.2f} metros de serragem/refugo (< 400mm)")
-            print("-" * 40)
-            
-        print("\n")
-        
-        # Confirma e salva o movimento do banco de retalhos desta linha
-        session.commit()
+                # 1. SAQUE DO BANCO: Puxa todos os retalhos desta bitola
+                retalhos_bd = session.query(EstoqueRetalhos).filter_by(bitola=bitola).all()
+                lista_retalhos_disponiveis = [r.comprimento for r in retalhos_bd]
+                
+                # Limpa o banco temporariamente
+                session.query(EstoqueRetalhos).filter_by(bitola=bitola).delete()
+                
+                # 2. Roda a Otimização
+                padroes, total_tabuas, info_retalhos, stats = calcular_cortes_1d(
+                    comprimentos, 
+                    retalhos_disponiveis=lista_retalhos_disponiveis,
+                    tamanho_tabua_bruta=2500
+                )
+                
+                # 3. EXIBE INSTRUÇÕES DOS RETALHOS (Se houver)
+                if info_retalhos:
+                    print(f"♻️  PEGAR NO ALMOXARIFADO OS SEGUINTES RETALHOS:")
+                    for r in info_retalhos:
+                        print(f"   ↳ Pegar pedaço de {r['tamanho']}mm | Fatiar: {r['cortes']} (Retalho: {r['sobra']}mm)")
+                    print("-" * 40)
+                
+                # 4. EXIBE INSTRUÇÕES DAS TÁBUAS NOVAS
+                if total_tabuas > 0:
+                    print(f"📦 PEGAR NO PÁTIO: {total_tabuas} tábuas brutas (2.5m)")
+                    contador = 1
+                    for padrao, repeticoes in padroes.items():
+                        espaco = sum(padrao) + ((len(padrao)-1)*3)
+                        sobra = 2200 - espaco # 2200 = 2500 - 300
+                        print(f"   Padrão {contador} (Repetir {repeticoes}x): Fatiar {list(padrao)} | (Retalho: {sobra}mm)")
+                        contador += 1
+                
+                # 5. DEPÓSITO NO BANCO: Salva as novas sobras geradas
+                for nova_sobra in stats['novos_retalhos']:
+                    novo_registro = EstoqueRetalhos(bitola=bitola, comprimento=int(nova_sobra))
+                    session.add(novo_registro)
+                    
+                print(f"   📉 Resumo de Desperdício: {stats['refugo_lixo_m']:.2f} metros de serragem/refugo (< 400mm)")
+                print("-" * 40)
+                
+            print("\n")
+            session.commit()
 
     session.close()
 

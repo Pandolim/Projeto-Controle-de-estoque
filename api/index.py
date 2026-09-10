@@ -264,10 +264,10 @@ def obter_receita(id_sofa):
         
         # Puxa a receita do sofá e cruza com o catálogo de peças usando o "peca_id"
         sql = text("""
-            SELECT r.peca_id, r.qtd, e.nome, e.comprimento_d1, e.largura_d2, e.espessura_d3 
+            SELECT r.peca_id, r.quantidade, e.nome, e.comprimento_d1, e.largura_d2, e.espessura_d3 
             FROM receitas_sofa r
             LEFT JOIN estoque_pecas e ON r.peca_id = e.id_peca
-            WHERE r.codigo_interno = :id_sofa
+            WHERE r.sofa_id = :id_sofa
         """)
         resultados = session.execute(sql, {'id_sofa': id_sofa}).fetchall()
         
@@ -286,6 +286,21 @@ def obter_receita(id_sofa):
         return jsonify(receita), 200
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
+
+# Importa o nosso novo robô sincronizador
+from sincronizador import executar_sincronizacao
+
+# ==========================================
+# ROTA DE AUTOMAÇÃO (CRON JOB)
+# ==========================================
+@app.route('/api/cron/sincronizar', methods=['GET', 'POST'])
+def cron_sincronizar():
+    # Aqui colocaremos o link exato de exportação do seu Google Sheets
+    url_planilha = "COLE_SEU_LINK_AQUI" 
+    
+    # Aciona o robô e devolve o resultado
+    resposta, status_code = executar_sincronizacao(url_planilha)
+    return jsonify(resposta), status_code
 
 if __name__ == '__main__':
     app.run()
