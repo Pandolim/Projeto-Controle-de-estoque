@@ -315,6 +315,31 @@ if (formOP && tabsLinhas) {
 }
 
 // ==========================================
+// CONTROLE DE ACESSO (FRONTEND)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const usuarioLogado = localStorage.getItem('usuario_logado');
+    
+    // Bloqueia o formulário de cadastro de nova peça
+    const formCadPeca = document.getElementById('formCadPeca');
+    if (formCadPeca && usuarioLogado !== 'kennedy') {
+        // Esconde o "card" inteiro onde o formulário está dentro
+        formCadPeca.parentElement.style.display = 'none'; 
+    }
+
+    // Remove a opção "Remover (-)" do dropdown de movimentação
+    const movTipo = document.getElementById('movTipo');
+    if (movTipo && usuarioLogado !== 'kennedy') {
+        for (let i = 0; i < movTipo.options.length; i++) {
+            if (movTipo.options[i].value === 'saida') {
+                movTipo.remove(i);
+                break;
+            }
+        }
+    }
+});
+
+// ==========================================
 // LÓGICA DO MÓDULO DE ESTOQUE E PEÇAS (SUPABASE) E FILTROS DE TABELA
 // ==========================================
 const formCadPeca = document.getElementById('formCadPeca');
@@ -484,13 +509,21 @@ function renderizarTabelaEstoqueGeral() {
         const dest = peca.estoqueDestino || 'N/A';
         const destColor = dest === 'Lidiane' ? '#8e44ad' : '#e67e22'; 
         
+        // Verifica quem está logado
+        const usuarioLogado = localStorage.getItem('usuario_logado');
+        
+        // Se for o kennedy, mostra o botão vermelho. Se não, deixa a coluna vazia.
+        const botaoExcluir = (usuarioLogado === 'kennedy') 
+            ? `<button class="btn-edit" onclick="removerPecaCatalogo('${peca.id}')" style="background-color: #e74c3c;">Excluir</button>` 
+            : `<span style="color: #bdc3c7; font-size: 12px;">Sem acesso</span>`;
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${peca.id}</strong><br><span style="font-size:11px; background:${destColor}; color:#fff; padding:2px 4px; border-radius:3px;">${dest}</span></td>
             <td>${peca.nome}</td>
             <td>${peca.d1}mm x ${peca.d2}mm x ${peca.d3}mm</td>
             <td><strong style="font-size: 16px; color: ${peca.qtd > 0 ? '#2ecc71' : '#e74c3c'};">${peca.qtd}</strong></td>
-            <td><button class="btn-edit" onclick="removerPecaCatalogo('${peca.id}')" style="background-color: #e74c3c;">Excluir</button></td>
+            <td>${botaoExcluir}</td>
         `;
         tabelaEstoqueGeral.appendChild(tr);
     });

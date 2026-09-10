@@ -64,22 +64,20 @@
                 const usuario = document.getElementById('usuario').value.trim().toLowerCase();
                 const senha = document.getElementById('senha').value;
 
-                // 1. Logins Administrativos
+                // Salva o usuário logado para usarmos como "crachá" de permissões
+                localStorage.setItem('usuario_logado', usuario);
+
                 if (usuario === 'kennedy' && senha === '123') { window.location.href = 'admin.html'; }
                 else if (usuario === 'pcp' && senha === '123') { window.location.href = 'pcp.html'; }
                 else if (usuario === 'serra' && senha === '123') { window.location.href = 'serra.html'; }
                 else if (usuario === 'almoxarifado' && senha === '123') { window.location.href = 'almoxarifado.html'; }
                 
-                // 2. Logins das Linhas de Produção
                 else if (['stilo1', 'stilo2', 'stilo3', 'economica', 'hibrida', 'bux', 'desenvolvimento'].includes(usuario) && senha === '123') {
-                    
-                    // Salva na memória do tablet qual linha fez o login
                     localStorage.setItem('linha_logada', usuario);
-                    
                     window.location.href = 'producao.html';
                 }
                 else {
-                    alert('Usuário ou senha incorretos! Teste com o nome da sua linha (ex: stilo1, hibrida).');
+                    alert('Usuário ou senha incorretos!');
                 }
             });
         }
