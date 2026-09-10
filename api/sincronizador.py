@@ -26,12 +26,7 @@ def executar_sincronizacao():
         print("⚡ Carregando catálogo do banco para a memória...")
         todas_pecas = session.execute(text("SELECT id_peca, comprimento_d1, largura_d2, espessura_d3, estoque_destino FROM estoque_pecas")).fetchall()
         
-        # Dicionário de cruzamento de medidas
         catalogo_memoria = {(p[1], p[2], p[3], p[4]): str(p[0]) for p in todas_pecas}
-        
-        # ==========================================
-        # A NOVA "MEMÓRIA" DE IDs (Evita o erro de duplicação)
-        # ==========================================
         ids_usados = {str(p[0]) for p in todas_pecas} 
         
         pecas_novas = []
@@ -39,12 +34,18 @@ def executar_sincronizacao():
         sofas_afetados = set()
         contador_linhas = 0
 
-        print("🔄 Cruzando dados em lote...")
+        print("🔄 Cruzando dados em lote (Filtro: Apenas Eucalipto)...")
         for row in leitor_csv:
             dados = dict(zip(cabecalho, row))
             codigo_sofa = str(dados.get('código interno', '')).strip()
             ins_peca = str(dados.get('ins', '')).strip().upper()
             mp_raw = str(dados.get('matéria prima', '')).lower()
+            
+            # ==========================================
+            # O NOVO FILTRO: IGNORA TUDO QUE NÃO FOR EUCALIPTO
+            # ==========================================
+            if 'eucalipto' not in mp_raw:
+                continue
             
             try:
                 qtd = int(float(str(dados.get('qtd.', '0')).replace(',', '.')))
@@ -60,25 +61,18 @@ def executar_sincronizacao():
             contador_linhas += 1
             destino_estoque = "Lidiane" if "-M" in ins_peca else "Mobly"
             
-            prefixo = "Eucalipto"
-            if "mdf" in mp_raw: prefixo = "MDF"
-            elif "pinus" in mp_raw: prefixo = "Pinus"
-            elif "papelão" in mp_raw: prefixo = "Papelão"
-            nome_peca_final = f"{prefixo}- {d1}x{d2}"
+            nome_peca_final = f"Eucalipto- {d1}x{d2}"
 
             chave_busca = (d1, d2, d3, destino_estoque)
             
             if chave_busca in catalogo_memoria:
                 peca_id = catalogo_memoria[chave_busca]
             else:
-                # Gera um ID e verifica se já existe na "lista negra"
                 peca_id = f"PEC-{random.randint(10000, 99999)}"
                 while peca_id in ids_usados:
                     peca_id = f"PEC-{random.randint(10000, 99999)}"
                 
-                # Registra que esse ID acabou de ser usado!
                 ids_usados.add(peca_id)
-                
                 catalogo_memoria[chave_busca] = peca_id
                 pecas_novas.append({
                     'id_peca': peca_id, 'nome': nome_peca_final, 
@@ -97,24 +91,17 @@ def executar_sincronizacao():
             """), pecas_novas)
 
         if sofas_afetados:
-            # ==========================================
-            # O NOVO "SUPER DELETE" (Uma única viagem ao banco!)
-            # ==========================================
-            # Transforma os IDs em uma lista segura para o SQL: ('sofa1', 'sofa2', 'sofa3'...)
             sofas_formatados = ", ".join([f"'{s}'" for s in sofas_afetados])
-            
-            # Manda apagar tudo de uma vez só!
             sql_delete_lote = f"DELETE FROM receitas_sofa WHERE sofa_id IN ({sofas_formatados})"
             session.execute(text(sql_delete_lote))
             
-            # E insere as milhares de receitas novas de uma vez
             session.execute(text("""
                 INSERT INTO receitas_sofa (sofa_id, peca_id, quantidade) 
                 VALUES (:sofa_id, :peca_id, :quantidade)
             """), receitas_novas)
 
         session.commit()
-        return {"status": "sucesso", "mensagem": f"{contador_linhas} itens sincronizados e {len(pecas_novas)} peças novas criadas!"}, 200
+        return {"status": "sucesso", "mensagem": f"{contador_linhas} itens de Eucalipto sincronizados e {len(pecas_novas)} peças novas criadas!"}, 200
 
     except Exception as e:
         session.rollback()
