@@ -24,11 +24,15 @@ def executar_sincronizacao():
             return {"status": "erro", "detalhes": "Colunas obrigatórias não encontradas na planilha."}, 400
 
         print("⚡ Carregando catálogo do banco para a memória...")
-        # 1. Puxa TODAS as peças de uma vez para não ter que pesquisar linha por linha
         todas_pecas = session.execute(text("SELECT id_peca, comprimento_d1, largura_d2, espessura_d3, estoque_destino FROM estoque_pecas")).fetchall()
         
-        # Cria um "dicionário" instantâneo: (d1, d2, d3, destino) -> id_peca
+        # Dicionário de cruzamento de medidas
         catalogo_memoria = {(p[1], p[2], p[3], p[4]): str(p[0]) for p in todas_pecas}
+        
+        # ==========================================
+        # A NOVA "MEMÓRIA" DE IDs (Evita o erro de duplicação)
+        # ==========================================
+        ids_usados = {str(p[0]) for p in todas_pecas} 
         
         pecas_novas = []
         receitas_novas = []
@@ -56,21 +60,25 @@ def executar_sincronizacao():
             contador_linhas += 1
             destino_estoque = "Lidiane" if "-M" in ins_peca else "Mobly"
             
-            # Formata o nome do material
             prefixo = "Eucalipto"
             if "mdf" in mp_raw: prefixo = "MDF"
             elif "pinus" in mp_raw: prefixo = "Pinus"
             elif "papelão" in mp_raw: prefixo = "Papelão"
             nome_peca_final = f"{prefixo}- {d1}x{d2}"
 
-            # 2. Busca na memória instantânea (Otimização Extrema)
             chave_busca = (d1, d2, d3, destino_estoque)
             
             if chave_busca in catalogo_memoria:
                 peca_id = catalogo_memoria[chave_busca]
             else:
-                # Se não existir, gera o ID, adiciona na memória e prepara para salvar
+                # Gera um ID e verifica se já existe na "lista negra"
                 peca_id = f"PEC-{random.randint(10000, 99999)}"
+                while peca_id in ids_usados:
+                    peca_id = f"PEC-{random.randint(10000, 99999)}"
+                
+                # Registra que esse ID acabou de ser usado!
+                ids_usados.add(peca_id)
+                
                 catalogo_memoria[chave_busca] = peca_id
                 pecas_novas.append({
                     'id_peca': peca_id, 'nome': nome_peca_final, 
@@ -82,7 +90,6 @@ def executar_sincronizacao():
 
         print("🚀 Enviando atualizações para o banco de dados...")
         
-        # 3. Salva todas as peças inéditas em uma única viagem ao banco
         if pecas_novas:
             session.execute(text("""
                 INSERT INTO estoque_pecas (id_peca, nome, comprimento_d1, largura_d2, espessura_d3, estoque_destino, quantidade) 
@@ -90,18 +97,16 @@ def executar_sincronizacao():
             """), pecas_novas)
 
         if sofas_afetados:
-            # 4. Limpa as receitas antigas dos sofás atualizados em uma tacada só
             for sofa in sofas_afetados:
                 session.execute(text("DELETE FROM receitas_sofa WHERE sofa_id = :sofa"), {'sofa': sofa})
             
-            # 5. Salva todas as milhares de receitas novas de uma vez
             session.execute(text("""
                 INSERT INTO receitas_sofa (sofa_id, peca_id, quantidade) 
                 VALUES (:sofa_id, :peca_id, :quantidade)
             """), receitas_novas)
 
         session.commit()
-        return {"status": "sucesso", "mensagem": f"{contador_linhas} itens sincronizados rapidamente!"}, 200
+        return {"status": "sucesso", "mensagem": f"{contador_linhas} itens sincronizados e {len(pecas_novas)} peças novas criadas!"}, 200
 
     except Exception as e:
         session.rollback()
