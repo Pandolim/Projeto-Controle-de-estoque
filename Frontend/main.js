@@ -139,35 +139,27 @@ const opQtd = document.getElementById('opQtd');
 const linhaSelecionadaTexto = document.getElementById('linhaSelecionadaTexto');
 
 const linhasProducao = ["Stilo 1.0", "Stilo 2.0", "Stilo 3.0", "Economica", "Hibrida", "Desenvolvimento", "BUX"];
-let todosSofas = []; // Agora temos uma lista ÚNICA para todos os sofás!
+let todosSofas = []; 
 let linhaAtual = "";
 let listaOPs = JSON.parse(localStorage.getItem('ops_salvas')) || []; 
 
 if (formOP && tabsLinhas) {
     renderizarTabelaOPs();
-    carregarSofasDoBanco(); // Puxa todos os dados assim que a tela abre
+    carregarSofasDoBanco(); 
 
-    // Função que busca do banco e guarda TUDO em um só lugar
     async function carregarSofasDoBanco() {
         try {
             const response = await fetch('/api/sofas'); 
             const sofas = await response.json();
             
-            // Guarda todos os sofás sem filtrar por linha
             todosSofas = sofas.map(sofa => ({
                 id: sofa.id_codigo,
-                nome: sofa.nome,
-                pecasPorSofa: 50 // Mantendo a estimativa visual por enquanto
+                nome: sofa.nome
             }));
             
             construirBotoesLinhas();
         } catch (error) {
-            console.error("Erro ao carregar os sofás do banco:", error);
-            // Fallback caso a API falhe
-            todosSofas = [
-                { id: "31.08.37.30", nome: "Amsterdã 1,80m (Suede Cinza)", pecasPorSofa: 42},
-                { id: "15.99.01.00", nome: "Beegees 2,20m", pecasPorSofa: 65}
-            ];
+            console.error("Erro ao carregar os sofás:", error);
             construirBotoesLinhas();
         }
     }
@@ -188,7 +180,6 @@ if (formOP && tabsLinhas) {
     }
 
     function selecionarLinha(linha) {
-        // A linha clicada apenas define o destino da O.P.
         linhaAtual = linha;
         linhaSelecionadaTexto.textContent = linha;
         
@@ -206,16 +197,13 @@ if (formOP && tabsLinhas) {
             return; 
         }
         
-        // Injeta TODOS os sofás na caixa de pesquisa, independente do botão clicado
         todosSofas.forEach(prod => {
             const opt = document.createElement('option');
             opt.value = prod.id; 
-            opt.dataset.pecas = prod.pecasPorSofa; 
             opt.textContent = `${prod.id} - ${prod.nome}`;
             opProduto.appendChild(opt);
         });
         
-        // Avisa ao jQuery/Select2 que a lista mudou
         if(typeof $ !== 'undefined') {
             $('#opProduto').val(null).trigger('change');
         }
@@ -228,18 +216,58 @@ if (formOP && tabsLinhas) {
         opProduto.addEventListener('change', calcularPreview);
     }
 
-    function calcularPreview() {
+    // ==========================================
+    // AGORA É UMA BUSCA REAL NO BANCO DE DADOS
+    // ==========================================
+    async function calcularPreview() {
         const qtdSofas = parseInt(opQtd.value) || 0;
         const selectValue = opProduto.value;
         const optionSelecionada = opProduto.options[opProduto.selectedIndex];
+        const btnSubmit = document.getElementById('btnGerarOP');
         
         if (qtdSofas > 0 && selectValue !== "") {
-            const pecasPorSofa = optionSelecionada ? parseInt(optionSelecionada.dataset.pecas) : 0;
-            const total = pecasPorSofa * qtdSofas;
-            
             document.getElementById('previewBOM').classList.replace('resultado-oculto', 'resultado-visivel');
-            document.getElementById('listaPecasPreview').innerHTML = `<li><strong>Madeira Estrutural Estimada:</strong> ${(total * 0.8).toFixed(0)} peças</li>`;
-            document.getElementById('totalPecasPreview').textContent = total;
+            document.getElementById('listaPecasPreview').innerHTML = '<li style="color: #7f8c8d;">⏳ Calculando ficha técnica no servidor...</li>';
+            document.getElementById('totalPecasPreview').textContent = '...';
+            btnSubmit.disabled = true; // Impede gerar OP antes de terminar o cálculo
+            
+            try {
+                // Puxa a receita real lá do index.py
+                const response = await fetch(`/api/receitas/${selectValue}`);
+                const receita = await response.json();
+
+                if (receita.length === 0) {
+                    document.getElementById('listaPecasPreview').innerHTML = '<li style="color: #e74c3c;">Nenhuma peça cadastrada para este sofá no banco.</li>';
+                    document.getElementById('totalPecasPreview').textContent = '0';
+                    optionSelecionada.dataset.pecas = 0;
+                    btnSubmit.disabled = false;
+                    return;
+                }
+
+                let htmlReceita = `<ul style="max-height: 200px; overflow-y: auto; padding-left: 20px; font-size: 14px; color: #34495e;">`;
+                let totalPecasUnitario = 0;
+
+                // Desenha a lista de materiais multiplicada pela O.P.
+                receita.forEach(item => {
+                    totalPecasUnitario += item.qtd; // Soma a receita base
+                    const qtdTotalMateria = item.qtd * qtdSofas;
+                    htmlReceita += `<li style="margin-bottom: 4px;"><strong>${qtdTotalMateria}x</strong> - ${item.nome_peca}</li>`;
+                });
+                
+                htmlReceita += `</ul>`;
+
+                document.getElementById('listaPecasPreview').innerHTML = htmlReceita;
+                document.getElementById('totalPecasPreview').textContent = (totalPecasUnitario * qtdSofas);
+                
+                // Grava o valor real na memória para a hora de Gerar a O.P.
+                optionSelecionada.dataset.pecas = totalPecasUnitario;
+                btnSubmit.disabled = false;
+
+            } catch (error) {
+                console.error("Erro ao buscar receita:", error);
+                document.getElementById('listaPecasPreview').innerHTML = '<li style="color: #e74c3c;">Erro ao carregar a ficha técnica.</li>';
+                btnSubmit.disabled = false;
+            }
         } else {
             document.getElementById('previewBOM').classList.replace('resultado-visivel', 'resultado-oculto');
         }
@@ -249,13 +277,19 @@ if (formOP && tabsLinhas) {
         event.preventDefault();
         const optionSelecionada = opProduto.options[opProduto.selectedIndex];
         const qtdSofas = parseInt(opQtd.value);
+        const pecasPorSofa = parseInt(optionSelecionada.dataset.pecas) || 0;
         
+        if (pecasPorSofa === 0) {
+            alert("Atenção: A ficha técnica deste sofá está vazia. Cadastre a receita na planilha antes de gerar a O.P.");
+            return;
+        }
+
         const novaOP = { 
             numero: `OP-${Math.floor(Math.random() * 10000)}`, 
             linha: linhaAtual, 
             produto: optionSelecionada.textContent, 
             quantidade: qtdSofas, 
-            pecas: parseInt(optionSelecionada.dataset.pecas) * qtdSofas, 
+            pecas: (pecasPorSofa * qtdSofas), 
             status: 'Pendente na Serra' 
         };
         
