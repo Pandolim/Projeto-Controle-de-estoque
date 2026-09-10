@@ -138,8 +138,8 @@ const opProduto = document.getElementById('opProduto');
 const opQtd = document.getElementById('opQtd');
 const linhaSelecionadaTexto = document.getElementById('linhaSelecionadaTexto');
 
-const linhasProducao = ["Stilo 1.0", "Stilo 2.0", "Stilo 3.0", "Economica", "Hibrida", "Desenvolvimento", "BUX", "Sem Linha Cadastrada"];
-let catalogoProdutos = {}; // Agora será preenchido pelo Banco de Dados!
+const linhasProducao = ["Stilo 1.0", "Stilo 2.0", "Stilo 3.0", "Economica", "Hibrida", "Desenvolvimento", "BUX"];
+let todosSofas = []; // Agora temos uma lista ÚNICA para todos os sofás!
 let linhaAtual = "";
 let listaOPs = JSON.parse(localStorage.getItem('ops_salvas')) || []; 
 
@@ -147,37 +147,27 @@ if (formOP && tabsLinhas) {
     renderizarTabelaOPs();
     carregarSofasDoBanco(); // Puxa todos os dados assim que a tela abre
 
-    // Função que busca do banco e organiza os sofás nas caixinhas das linhas
+    // Função que busca do banco e guarda TUDO em um só lugar
     async function carregarSofasDoBanco() {
         try {
-            // OBS: Esta rota precisará ser criada na Vercel depois (ex: /api/sofas)
             const response = await fetch('/api/sofas'); 
             const sofas = await response.json();
             
-            // Inicializa o catálogo vazio para todas as linhas
-            linhasProducao.forEach(linha => catalogoProdutos[linha] = []);
-            
-            // Distribui os sofás do banco nas suas linhas corretas
-            sofas.forEach(sofa => {
-                const nomeLinha = sofa.linha_producao || "Sem Linha Cadastrada";
-                if(catalogoProdutos[nomeLinha]) {
-                    catalogoProdutos[nomeLinha].push({
-                        id: sofa.id_codigo,
-                        nome: sofa.nome,
-                        // Simplificando o cálculo de peças para a UI por enquanto
-                        pecasPorSofa: 50 
-                    });
-                }
-            });
+            // Guarda todos os sofás sem filtrar por linha
+            todosSofas = sofas.map(sofa => ({
+                id: sofa.id_codigo,
+                nome: sofa.nome,
+                pecasPorSofa: 50 // Mantendo a estimativa visual por enquanto
+            }));
             
             construirBotoesLinhas();
         } catch (error) {
             console.error("Erro ao carregar os sofás do banco:", error);
-            // Fallback (mantém os antigos caso a API falhe)
-            catalogoProdutos = {
-                "Economica": [{ id: "31.08.37.30", nome: "Amsterdã 1,80m (Suede Cinza)", pecasPorSofa: 42}],
-                "Stilo 1.0": [{ id: "15.99.01.00", nome: "Beegees 2,20m", pecasPorSofa: 65}]
-            };
+            // Fallback caso a API falhe
+            todosSofas = [
+                { id: "31.08.37.30", nome: "Amsterdã 1,80m (Suede Cinza)", pecasPorSofa: 42},
+                { id: "15.99.01.00", nome: "Beegees 2,20m", pecasPorSofa: 65}
+            ];
             construirBotoesLinhas();
         }
     }
@@ -198,22 +188,26 @@ if (formOP && tabsLinhas) {
     }
 
     function selecionarLinha(linha) {
+        // A linha clicada apenas define o destino da O.P.
         linhaAtual = linha;
         linhaSelecionadaTexto.textContent = linha;
-        opProduto.disabled = false; opQtd.disabled = false; document.getElementById('opData').disabled = false; document.getElementById('btnGerarOP').disabled = false;
+        
+        opProduto.disabled = false; 
+        opQtd.disabled = false; 
+        document.getElementById('opData').disabled = false; 
+        document.getElementById('btnGerarOP').disabled = false;
         
         opProduto.innerHTML = '<option value="">Digite o código ou nome do sofá...</option>';
-        const produtosDaLinha = catalogoProdutos[linha] || [];
         
-        if (produtosDaLinha.length === 0) { 
-            opProduto.innerHTML = '<option value="">Nenhum produto cadastrado nesta linha</option>'; 
+        if (todosSofas.length === 0) { 
+            opProduto.innerHTML = '<option value="">Nenhum produto cadastrado no banco</option>'; 
             opProduto.disabled = true; 
-            // Atualiza o visual do Select2
             if(typeof $ !== 'undefined') $('#opProduto').trigger('change');
             return; 
         }
         
-        produtosDaLinha.forEach(prod => {
+        // Injeta TODOS os sofás na caixa de pesquisa, independente do botão clicado
+        todosSofas.forEach(prod => {
             const opt = document.createElement('option');
             opt.value = prod.id; 
             opt.dataset.pecas = prod.pecasPorSofa; 
@@ -221,7 +215,7 @@ if (formOP && tabsLinhas) {
             opProduto.appendChild(opt);
         });
         
-        // Avisa ao jQuery/Select2 que a lista interna mudou e ele precisa se redesenhar
+        // Avisa ao jQuery/Select2 que a lista mudou
         if(typeof $ !== 'undefined') {
             $('#opProduto').val(null).trigger('change');
         }
@@ -229,7 +223,6 @@ if (formOP && tabsLinhas) {
 
     opQtd.addEventListener('input', calcularPreview);
     if(typeof $ !== 'undefined') {
-        // O Select2 muda o evento de "change", então escutamos pelo jQuery
         $('#opProduto').on('change', calcularPreview);
     } else {
         opProduto.addEventListener('change', calcularPreview);
