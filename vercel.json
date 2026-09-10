@@ -18,5 +18,11 @@
       "source": "/(.*)",
       "destination": "/Frontend/$1"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/sincronizar",
+      "schedule": "0 * * * *"
+    }
   ]
 }
