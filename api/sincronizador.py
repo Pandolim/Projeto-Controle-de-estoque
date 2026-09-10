@@ -97,9 +97,17 @@ def executar_sincronizacao():
             """), pecas_novas)
 
         if sofas_afetados:
-            for sofa in sofas_afetados:
-                session.execute(text("DELETE FROM receitas_sofa WHERE sofa_id = :sofa"), {'sofa': sofa})
+            # ==========================================
+            # O NOVO "SUPER DELETE" (Uma única viagem ao banco!)
+            # ==========================================
+            # Transforma os IDs em uma lista segura para o SQL: ('sofa1', 'sofa2', 'sofa3'...)
+            sofas_formatados = ", ".join([f"'{s}'" for s in sofas_afetados])
             
+            # Manda apagar tudo de uma vez só!
+            sql_delete_lote = f"DELETE FROM receitas_sofa WHERE sofa_id IN ({sofas_formatados})"
+            session.execute(text(sql_delete_lote))
+            
+            # E insere as milhares de receitas novas de uma vez
             session.execute(text("""
                 INSERT INTO receitas_sofa (sofa_id, peca_id, quantidade) 
                 VALUES (:sofa_id, :peca_id, :quantidade)
