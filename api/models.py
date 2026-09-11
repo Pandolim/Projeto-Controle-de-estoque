@@ -106,6 +106,17 @@ class EstoqueRetalhos(Base):
     comprimento = Column(Integer, nullable=False)  # Ex: 1831 (em mm)
     data_geracao = Column(DateTime, default=datetime.utcnow)
 
+class Usuario(Base):
+    """Tabela de controle de acesso e autenticação com senhas criptografadas."""
+    __tablename__ = 'usuarios'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(50), unique=True, nullable=False)
+    senha_hash = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False) 
+    linha = Column(String(50), nullable=True) 
+    data_criacao = Column(DateTime, default=datetime.utcnow)
+
 # ==========================================
 # SETUP DE CONEXÃO (NUVEM - SUPABASE)
 # ==========================================

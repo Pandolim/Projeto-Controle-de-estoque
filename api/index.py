@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
+from werkzeug.security import generate_password_hash, check_password_hash # NOVA FERRAMENTA DE HASH
 import sys
 import os
 
 # FORÇA a Vercel a olhar para a pasta 'api' para achar o models.py
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from models import engine, PaletePai, EstoquePeca
+from models import engine, PaletePai, EstoquePeca, Usuario # ADICIONADO O Usuario AQUI
 
 # A Vercel precisa EXATAMENTE desta linha no nível zero do arquivo para funcionar
 app = Flask(__name__)
@@ -140,6 +141,77 @@ def deletar_peca(id_peca):
         return jsonify({"status": "sucesso"}), 200
     except Exception as e:
         return jsonify({"erro": str(e)}), 400
+
+# ==========================================
+# ROTAS DE AUTENTICAÇÃO E USUÁRIOS
+# ==========================================
+
+@app.route('/api/setup-usuarios', methods=['GET'])
+def setup_usuarios():
+    """ROTA TEMPORÁRIA: Cria os usuários iniciais com senhas criptografadas. Rode apenas uma vez!"""
+    try:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Trava de segurança: Se já tem usuário, não faz nada para não duplicar
+        if session.query(Usuario).count() > 0:
+            session.close()
+            return jsonify({"status": "aviso", "mensagem": "Os usuários já foram criados anteriormente!"}), 200
+
+        # Criando o catálogo de usuários com a senha '123' transformada em Hash irreversível
+        usuarios_iniciais = [
+            Usuario(username='kennedy', senha_hash=generate_password_hash('123'), role='admin'),
+            Usuario(username='pcp', senha_hash=generate_password_hash('123'), role='pcp'),
+            Usuario(username='serra', senha_hash=generate_password_hash('123'), role='serra'),
+            Usuario(username='almoxarifado', senha_hash=generate_password_hash('123'), role='almoxarifado'),
+            Usuario(username='stilo1', senha_hash=generate_password_hash('123'), role='producao', linha='Stilo 1.0'),
+            Usuario(username='stilo2', senha_hash=generate_password_hash('123'), role='producao', linha='Stilo 2.0'),
+            Usuario(username='stilo3', senha_hash=generate_password_hash('123'), role='producao', linha='Stilo 3.0'),
+            Usuario(username='economica', senha_hash=generate_password_hash('123'), role='producao', linha='Economica'),
+            Usuario(username='hibrida', senha_hash=generate_password_hash('123'), role='producao', linha='Hibrida')
+        ]
+        
+        session.add_all(usuarios_iniciais)
+        session.commit()
+        session.close()
+        
+        return jsonify({"status": "sucesso", "mensagem": "Banco de dados populado com senhas criptografadas!"}), 201
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """Verifica as credenciais comparando o texto digitado com o Hash do banco."""
+    try:
+        dados = request.json
+        username_digitado = dados.get('usuario', '').strip().lower()
+        senha_digitada = dados.get('senha', '')
+        
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Busca o usuário no banco de dados
+        usuario = session.query(Usuario).filter_by(username=username_digitado).first()
+        
+        # Se o usuário não existir OU a senha não bater com o Hash, bloqueia!
+        if not usuario or not check_password_hash(usuario.senha_hash, senha_digitada):
+            session.close()
+            return jsonify({"status": "erro", "mensagem": "Usuário ou senha incorretos."}), 401
+            
+        # Se passou, devolve o crachá de acesso
+        resposta = {
+            "status": "sucesso",
+            "username": usuario.username,
+            "role": usuario.role,
+            "linha": usuario.linha
+        }
+        
+        session.close()
+        return jsonify(resposta), 200
+        
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
     
 # ==========================================
 # ROTAS PARA O HISTÓRICO DE ENVIOS (NUVEM)
