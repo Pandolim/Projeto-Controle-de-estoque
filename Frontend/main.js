@@ -1123,5 +1123,149 @@ window.toggleModulo = function(idConteudo, elementoHeader) {
         icone.textContent = '−'; // Usando o sinal de menos
     }
 };
+// ==========================================
+// LÓGICA DO MÓDULO ALMOXARIFADO
+// ==========================================
+const tabelaPais = document.getElementById('tabelaPais');
+const tabelaFilhos = document.getElementById('tabelaFilhos');
+
+// Elementos de Filtro - Pais
+const buscaPais = document.getElementById('buscaPais');
+const filtroDestinoPais = document.getElementById('filtroDestinoPais');
+
+// Elementos de Filtro - Filhos
+const buscaPecaSelect2 = document.getElementById('buscaPecaSelect2');
+const filtroOcultarZeradasAlmoxarifado = document.getElementById('filtroOcultarZeradasAlmoxarifado');
+
+if (tabelaPais || tabelaFilhos) {
+    
+    // --- 1. GESTÃO DE PALETES PAIS (ESTOQUE BRUTO) ---
+    // (Por enquanto, usando dados locais até criarmos a rota GET no Python para os paletes)
+    let estoquePaletesAlmox = [
+        { id: 'PAL-001', espessura: 25, largura: 150, comprimento: 3.0, pecas: 800, destino: 'Lidiane' },
+        { id: 'PAL-002', espessura: 25, largura: 100, comprimento: 3.0, pecas: 500, destino: 'Mobly' }
+    ];
+
+    function renderizarPais() {
+        if (!tabelaPais) return;
+        tabelaPais.innerHTML = '';
+        
+        const termoBusca = buscaPais ? buscaPais.value.toLowerCase() : '';
+        const filtroDestino = filtroDestinoPais ? filtroDestinoPais.value : '';
+
+        // Aplica os filtros (Texto livre + Select2 de Destino)
+        const paletesFiltrados = estoquePaletesAlmox.filter(p => {
+            if (termoBusca && !p.id.toLowerCase().includes(termoBusca)) return false;
+            if (filtroDestino && p.destino !== filtroDestino) return false;
+            return true;
+        });
+
+        if (paletesFiltrados.length === 0) {
+            tabelaPais.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #7f8c8d;">Nenhum palete encontrado com esses filtros.</td></tr>`;
+            return;
+        }
+
+        paletesFiltrados.forEach(palete => {
+            const tr = document.createElement('tr');
+            const destColor = palete.destino === 'Lidiane' ? '#C6E6FB' : '#FEBA4F'; 
+            const fontColor = palete.destino === 'Lidiane' ? '#2c3e50' : '#8e44ad'; 
+            
+            tr.innerHTML = `
+                <td><strong>${palete.id}</strong></td>
+                <td><span style="background:${destColor}; color:${fontColor}; padding:3px 6px; border-radius:3px; font-size:12px; font-weight:bold;">${palete.destino}</span></td>
+                <td>${palete.espessura}x${palete.largura}mm - ${palete.comprimento}m</td>
+                <td><strong style="font-size: 16px;">${palete.pecas}</strong></td>
+                <td><button class="btn-primary" style="padding: 5px 10px; font-size: 12px; background-color: #34495e;">Editar Lote</button></td>
+            `;
+            tabelaPais.appendChild(tr);
+        });
+    }
+
+    // Escuta quando o usuário digita ou muda o Select2
+    if (buscaPais) buscaPais.addEventListener('input', renderizarPais);
+    if(typeof $ !== 'undefined' && filtroDestinoPais) {
+        $('#filtroDestinoPais').on('change', renderizarPais);
+    }
+    renderizarPais(); // Chamada inicial
+
+
+    // --- 2. GESTÃO DE PEÇAS CORTADAS (CONECTADO À NUVEM) ---
+    let catalogoAlmoxarifado = []; // Memória temporária da tela
+
+    async function carregarPecasAlmoxarifado() {
+        if (!tabelaFilhos) return;
+        try {
+            const response = await fetch('/api/pecas');
+            catalogoAlmoxarifado = await response.json();
+            
+            // Injeta as peças no Select2 para busca inteligente
+            if (buscaPecaSelect2) {
+                buscaPecaSelect2.innerHTML = '<option value="">Todos os itens cadastrados...</option>';
+                catalogoAlmoxarifado.forEach(p => {
+                    const dest = p.estoqueDestino || 'N/A';
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `${p.id} - ${p.nome} (${dest}) - Saldo: ${p.qtd}`;
+                    buscaPecaSelect2.appendChild(opt);
+                });
+                // Avisa o jQuery para redesenhar a caixa
+                if(typeof $ !== 'undefined') $('#buscaPecaSelect2').val(null).trigger('change');
+            }
+            
+            renderizarFilhos();
+        } catch (error) {
+            console.error("Erro ao buscar peças da nuvem:", error);
+            tabelaFilhos.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e74c3c;">Erro ao conectar com o banco de dados.</td></tr>`;
+        }
+    }
+
+    function renderizarFilhos() {
+        if (!tabelaFilhos || catalogoAlmoxarifado.length === 0) return;
+        tabelaFilhos.innerHTML = '';
+        
+        const selectValue = buscaPecaSelect2 ? buscaPecaSelect2.value : '';
+        const ocultarZeradas = filtroOcultarZeradasAlmoxarifado ? filtroOcultarZeradasAlmoxarifado.checked : false;
+
+        // Processa as duas regras de filtro
+        const pecasFiltradas = catalogoAlmoxarifado.filter(peca => {
+            if (ocultarZeradas && peca.qtd <= 0) return false;
+            // Se tiver algo selecionado no Select2, mostra SÓ aquela peça
+            if (selectValue && peca.id !== selectValue) return false; 
+            return true;
+        });
+
+        if (pecasFiltradas.length === 0) {
+            tabelaFilhos.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #7f8c8d;">Nenhuma peça corresponde aos filtros aplicados.</td></tr>`;
+            return;
+        }
+
+        pecasFiltradas.forEach(peca => {
+            const dest = peca.estoqueDestino || 'N/A';
+            const destColor = dest === 'Lidiane' ? '#C6E6FB' : '#FEBA4F'; 
+            const fontColor = dest === 'Lidiane' ? '#2c3e50' : '#8e44ad'; 
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${peca.id}</strong></td>
+                <td>${peca.nome} (${peca.d1}x${peca.d2}x${peca.d3}mm)</td>
+                <td><strong style="font-size: 16px; color: ${peca.qtd > 0 ? '#27ae60' : '#e74c3c'};">${peca.qtd}</strong></td>
+                <td><span style="background:${destColor}; color:${fontColor}; padding:3px 6px; border-radius:3px; font-size:12px; font-weight:bold;">${dest}</span></td>
+                <td><button class="btn-primary" style="background-color: #3498db; padding: 5px 10px; font-size: 12px;">Auditoria</button></td>
+            `;
+            tabelaFilhos.appendChild(tr);
+        });
+    }
+
+    // Escuta as mudanças no Select2 e na caixinha de Ocultar Zeradas
+    if(typeof $ !== 'undefined' && buscaPecaSelect2) {
+        $('#buscaPecaSelect2').on('change', renderizarFilhos);
+    }
+    if (filtroOcultarZeradasAlmoxarifado) {
+        filtroOcultarZeradasAlmoxarifado.addEventListener('change', renderizarFilhos);
+    }
+
+    // Busca as informações na nuvem assim que entra no Almoxarifado
+    carregarPecasAlmoxarifado();
+}
 }
 carregarDropdownLinha();
