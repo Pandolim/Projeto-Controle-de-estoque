@@ -69,7 +69,7 @@
         <!-- ========================================== -->
         <div class="accordion-container">
             <div class="modulo-header" onclick="toggleModulo('modPaletes', this)">
-                <h2>🪵 Gestão de Paletes (Serra)</h2>
+                <h2>🪵 Entrada/Saida Paletes</h2>
                 <span class="icone-toggle">+</span>
             </div>
             <div id="modPaletes" class="modulo-conteudo">
@@ -116,7 +116,7 @@
                     <!-- Ação 2: Consumir Peças de um Palete -->
                     <section class="card reader-card">
                         <h2>Registrar Consumo (Baixa)</h2>
-                        <p>Informe o ID do palete e quantas peças foram retiradas para a serra.</p>
+                        <p>Informe o ID do palete levado para a serra.</p>
                         
                         <form id="formConsumo">
                             <div class="input-group">
@@ -139,7 +139,7 @@
         <!-- ========================================== -->
         <div class="accordion-container">
             <div class="modulo-header" onclick="toggleModulo('modCadastro', this)">
-                <h2>✏️ Cadastro e Movimentação Manual</h2>
+                <h2>✏️ Entrada de Estoque(pecas)</h2>
                 <span class="icone-toggle">+</span>
             </div>
             <div id="modCadastro" class="modulo-conteudo">
@@ -212,14 +212,14 @@
         <!-- ========================================== -->
         <div class="accordion-container">
             <div class="modulo-header" onclick="toggleModulo('modTriagem', this)">
-                <h2>📋 Triagem de Pedidos Extras da Produção</h2>
+                <h2>📋 Pedidos de Corte Produção</h2>
                 <span class="icone-toggle">−</span>
             </div>
             <!-- NOTA: Tem a classe "aberto" para já iniciar expandido -->
             <div id="modTriagem" class="modulo-conteudo aberto">
                 <section class="card table-card" style="margin-top: 0; border-left: 5px solid #f39c12;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                        <h2 style="margin: 0;">Triagem de Pedidos da Produção</h2>
+                        <h2 style="margin: 0;">Pedidos de Corte Produção</h2>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <label for="filtroDataPedidos" style="margin: 0; font-weight: bold; color: #34495e;">Exibindo dia:</label>
                             <input type="date" id="filtroDataPedidos" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
@@ -249,7 +249,7 @@
         <!-- ========================================== -->
         <div class="accordion-container">
             <div class="modulo-header" onclick="toggleModulo('modSaida', this)">
-                <h2>🏭 Saída e Histórico de Envio para a Linha</h2>
+                <h2>🏭 Saída para Linha</h2>
                 <span class="icone-toggle">+</span>
             </div>
             <div id="modSaida" class="modulo-conteudo">
@@ -319,7 +319,7 @@
         <!-- ========================================== -->
         <div class="accordion-container">
             <div class="modulo-header" onclick="toggleModulo('modEstoque', this)">
-                <h2>📦 Tabela de Estoque Geral</h2>
+                <h2>📦 Estoque Geral</h2>
                 <span class="icone-toggle">+</span>
             </div>
             <div id="modEstoque" class="modulo-conteudo">
