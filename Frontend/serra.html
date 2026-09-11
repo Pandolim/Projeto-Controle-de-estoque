@@ -20,25 +20,7 @@
 
     <main class="dashboard-container">
         
-        <!-- Ação: Consumir Peças de um Palete -->
-        <!-- Card centralizado e com largura máxima para ficar elegante sozinho -->
-        <section class="card reader-card" style="max-width: 600px; margin: 0 auto 30px auto;">
-            <h2>Registrar Consumo (Baixa)</h2>
-            <p>Informe o ID do palete e quantas peças foram retiradas para a serra.</p>
-            
-            <form id="formConsumo">
-                <div class="input-group">
-                    <label for="consID">Qual Palete foi aberto?</label>
-                    <input type="text" id="consID" placeholder="Bipe ou digite o ID do palete..." required autocomplete="off">
-                </div>
-                <div class="input-group">
-                    <label for="consQtd">Quantas peças foram retiradas?</label>
-                    <input type="number" id="consQtd" required min="1" placeholder="Ex: 300">
-                </div>
-                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; background-color: #f39c12; border: none;">Confirmar Baixa</button>
-            </form>
-        </section>
-
+       
         <!-- Estoque: Mostrando paletes individuais (Corrigido para aparecer 1x só) -->
         <section class="card table-card">
             <h2>Paletes Disponíveis no Pátio/Serra</h2>
