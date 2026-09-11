@@ -54,31 +54,71 @@
     <!-- O seu JavaScript embalado na tag correta -->
     <script>
         // ==========================================
-        // LÓGICA DE LOGIN
+        // LÓGICA DE LOGIN COM BACKEND SEGURO (HASH)
         // ==========================================
         const formLogin = document.getElementById('formLogin');
 
         if (formLogin) {
-            formLogin.addEventListener('submit', function(event) {
+            formLogin.addEventListener('submit', async function(event) {
                 event.preventDefault();
+                
                 const usuario = document.getElementById('usuario').value.trim().toLowerCase();
                 const senha = document.getElementById('senha').value;
+                const btnSubmit = event.target.querySelector('button[type="submit"]');
 
-                // Salva o usuário logado para usarmos como "crachá" de permissões
-                localStorage.setItem('usuario_logado', usuario);
+                // Trava o botão para evitar cliques duplos e dá feedback visual
+                btnSubmit.disabled = true;
+                btnSubmit.textContent = "Autenticando...";
 
-                if (usuario === 'kennedy' && senha === '123') { window.location.href = 'admin.html'; }
-                else if (usuario === 'pcp' && senha === '123') { window.location.href = 'pcp.html'; }
-                else if (usuario === 'serra' && senha === '123') { window.location.href = 'serra.html'; }
-                else if (usuario === 'estoque' && senha === '123') { window.location.href = 'estoque.html'; }
-                else if (usuario === 'almoxarifado' && senha === '123') { window.location.href = 'almoxarifado.html'; }
-                
-                else if (['stilo1', 'stilo2', 'stilo3', 'economica', 'hibrida', 'bux', 'desenvolvimento'].includes(usuario) && senha === '123') {
-                    localStorage.setItem('linha_logada', usuario);
-                    window.location.href = 'producao.html';
-                }
-                else {
-                    alert('Usuário ou senha incorretos!');
+                try {
+                    // Manda a tentativa de login para o servidor Python
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ usuario: usuario, senha: senha })
+                    });
+                    
+                    const data = await response.json();
+
+                    if (response.ok && data.status === 'sucesso') {
+                        // 1. O servidor autorizou! Salvamos os crachás na memória.
+                        localStorage.setItem('usuario_logado', data.username);
+                        localStorage.setItem('role_logado', data.role);
+                        
+                        // Se for uma linha de produção, salva o nome da linha
+                        if (data.linha) {
+                            localStorage.setItem('linha_logada', data.linha);
+                        } else {
+                            localStorage.removeItem('linha_logada'); // Limpa resquícios de acessos antigos
+                        }
+
+                        // 2. O servidor decide para onde o usuário vai com base no 'role'
+                        if (data.role === 'admin') {
+                            window.location.href = 'admin.html';
+                        } else if (data.role === 'pcp') {
+                            window.location.href = 'pcp.html';
+                        } else if (data.role === 'serra') {
+                            window.location.href = 'serra.html';
+                        } else if (data.role === 'almoxarifado') {
+                            window.location.href = 'almoxarifado.html';
+                        } else if (data.role === 'producao') {
+                            window.location.href = 'producao.html';
+                        } else {
+                            alert("Cargo desconhecido no sistema. Contate o administrador.");
+                            btnSubmit.disabled = false;
+                            btnSubmit.textContent = "Entrar";
+                        }
+                    } else {
+                        // O Hash não bateu com a senha, ou o usuário não existe
+                        alert('❌ ' + (data.mensagem || 'Usuário ou senha incorretos!'));
+                        btnSubmit.disabled = false;
+                        btnSubmit.textContent = "Entrar";
+                    }
+                } catch (error) {
+                    console.error("Erro na requisição de login:", error);
+                    alert("Erro ao conectar com o servidor. Verifique sua internet.");
+                    btnSubmit.disabled = false;
+                    btnSubmit.textContent = "Entrar";
                 }
             });
         }
