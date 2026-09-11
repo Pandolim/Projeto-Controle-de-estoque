@@ -5,6 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Almoxarifado - Gestão de Estoque</title>
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Importação do CSS do Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        /* Ajustes finos para o Select2 e Módulos Sanfonáveis */
+        .modulo-conteudo { 
+            display: none; 
+            padding: 20px; 
+            background: #fff; 
+            border: 1px solid #ddd; 
+            border-top: none; 
+            border-radius: 0 0 5px 5px; 
+            margin-bottom: 20px;
+        }
+        .modulo-conteudo.aberto { display: block; }
+        .modulo-header { 
+            cursor: pointer; 
+            background: #34495e; 
+            color: white; 
+            padding: 15px 20px; 
+            border-radius: 5px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-top: 15px; 
+            transition: background 0.3s;
+        }
+        .modulo-header:hover { background: #2c3e50; }
+        .modulo-header.aberto { border-radius: 5px 5px 0 0; }
+        
+        .select2-container .select2-selection--single {
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 38px;
+        }
+    </style>
 </head>
 <body class="dashboard-body">
     
@@ -12,55 +52,118 @@
         <h1>Módulo Almoxarifado - Gestão e Auditoria</h1>
         <div>
             <a href="admin.html" class="btn-primary" style="margin-right: 10px; text-decoration: none;">Voltar ao Painel</a>
-            <a href="login.html" class="btn-sair">Sair</a>
+            <!-- Adicionado logout seguro limpando o cache -->
+            <a href="login.html" class="btn-sair" onclick="localStorage.clear();">Sair</a>
         </div>
     </header>
 
     <main class="dashboard-container">
         
-        <!-- Área de Gestão de Matéria-Prima (Pais) -->
-        <section class="card table-card">
-            <h2>Estoque de Matéria-Prima (Paletes Pais)</h2>
-            <p style="color: #7f8c8d; margin-bottom: 15px;">Auditoria de paletes brutos recebidos dos fornecedores.</p>
+        <!-- ========================================== -->
+        <!-- MÓDULO 1: ESTOQUE BRUTO (PALETES PAIS)     -->
+        <!-- ========================================== -->
+        <div class="modulo-header" onclick="toggleModulo('moduloPais', this)">
+            <h2 style="margin: 0; font-size: 18px;">🪵 Estoque de Matéria-Prima Bruta (Paletes Recebidos)</h2>
+            <span class="icone-toggle" style="font-size: 24px; font-weight: bold;">+</span>
+        </div>
+        
+        <div id="moduloPais" class="modulo-conteudo">
+            <p style="color: #7f8c8d; margin-bottom: 15px;">Auditoria de paletes brutos aguardando envio para a Serra.</p>
+            
+            <div class="filtros-container" style="display: flex; gap: 15px; margin-bottom: 15px;">
+                <div style="flex: 2;">
+                    <!-- Pesquisa livre tradicional -->
+                    <input type="text" id="buscaPais" placeholder="Buscar por ID do Lote ou Material..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div style="flex: 1;">
+                    <!-- Filtro inteligente com Select2 -->
+                    <select id="filtroDestinoPais" style="width: 100%;">
+                        <option value="">Todos os Destinos</option>
+                        <option value="Lidiane">Apenas Lidiane</option>
+                        <option value="Mobly">Apenas Mobly</option>
+                    </select>
+                </div>
+            </div>
+
             <table class="estoque-table">
                 <thead>
                     <tr>
                         <th>ID (Lote)</th>
-                        <th>Material (INS)</th>
+                        <th>Material / Destino</th>
                         <th>Dimensões</th>
                         <th>Qtd. Peças</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabelaPais">
-                    <!-- Preenchido via JavaScript -->
+                    <tr><td colspan="5" style="text-align: center; color: #7f8c8d;">Nenhum palete bruto registrado no momento.</td></tr>
                 </tbody>
             </table>
-        </section>
+        </div>
 
-        <!-- Área de Gestão de Peças Cortadas (Filhos) e Roteamento -->
-        <section class="card table-card" style="margin-top: 20px;">
-            <h2>Estoque de Peças Cortadas (Paletes Filhos)</h2>
-            <p style="color: #7f8c8d; margin-bottom: 15px;">Ajuste de quantidades e destinação para as linhas de produção (PCP).</p>
+        <!-- ========================================== -->
+        <!-- MÓDULO 2: ESTOQUE DE PEÇAS CORTADAS        -->
+        <!-- ========================================== -->
+        <div class="modulo-header" onclick="toggleModulo('moduloFilhos', this)">
+            <h2 style="margin: 0; font-size: 18px;">🪚 Catálogo de Peças Cortadas (Pronto para Uso)</h2>
+            <span class="icone-toggle" style="font-size: 24px; font-weight: bold;">+</span>
+        </div>
+        
+        <div id="moduloFilhos" class="modulo-conteudo">
+            <p style="color: #7f8c8d; margin-bottom: 15px;">Gestão das peças já cortadas e disponíveis para envio à produção.</p>
+            
+            <div class="filtros-container" style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center;">
+                <div style="flex: 1;">
+                    <!-- Busca com Select2 -->
+                    <select id="buscaPecaSelect2" style="width: 100%;">
+                        <option value="">Aguardando catálogo do banco de dados...</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="checkbox" id="filtroOcultarZeradasAlmoxarifado" style="transform: scale(1.2); margin-right: 5px;">
+                    <label for="filtroOcultarZeradasAlmoxarifado" style="font-weight: bold; color: #2c3e50;">Ocultar peças zeradas</label>
+                </div>
+            </div>
+
             <table class="estoque-table">
                 <thead>
                     <tr>
-                        <th>ID (Corte)</th>
-                        <th>Origem (Pai)</th>
-                        <th>Peça</th>
+                        <th>ID (Peça)</th>
+                        <th>Nome da Peça</th>
                         <th>Qtd. Disponível</th>
-                        <th>Destino (Linha)</th>
+                        <th>Destino (Estoque)</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabelaFilhos">
-                    <!-- Preenchido via JavaScript -->
+                    <tr><td colspan="5" style="text-align: center; color: #7f8c8d;">Aguardando dados do servidor...</td></tr>
                 </tbody>
             </table>
-        </section>
+        </div>
 
     </main>
 
+    <!-- Importação do jQuery e Select2 (Sempre no final do body) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
     <script src="main.js"></script>
+
+    <!-- Ativação dos elementos visuais e Select2 -->
+    <script>
+        $(document).ready(function() {
+            // Ativa o Select2 para o filtro de destino (Ocultando a barra de pesquisa por ter poucas opções)
+            $('#filtroDestinoPais').select2({
+                placeholder: "Filtrar por Destino",
+                minimumResultsForSearch: Infinity 
+            });
+            
+            // Ativa o Select2 para a busca pesada de peças
+            $('#buscaPecaSelect2').select2({
+                placeholder: "Pesquise uma peça cadastrada (Código, Nome, Dimensões)...",
+                allowClear: true
+            });
+        });
+    </script>
 </body>
 </html>
