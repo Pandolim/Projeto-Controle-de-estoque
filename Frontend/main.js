@@ -1013,7 +1013,6 @@ if (btnExportarExcel) {
             btnExportarExcel.textContent = "⏳ Gerando Relatório...";
             btnExportarExcel.disabled = true;
 
-            // 1. Busca os dados de Estoque e Movimentações
             const response = await fetch('/api/pecas');
             const pecas = await response.json();
 
@@ -1022,7 +1021,6 @@ if (btnExportarExcel) {
 
             const enviosSalvos = listaPecasNaLinha; 
 
-            // Aba 1: Estoque Atual
             const dadosEstoque = pecas.map(p => ({
                 "Código/ID": p.id,
                 "Descrição da Peça": p.nome,
@@ -1033,22 +1031,17 @@ if (btnExportarExcel) {
                 "Saldo Atual": p.qtd
             }));
 
-            // Aba 2: Envios p/ Linha (Agora com Hora e Estoque Afetado)
             const dadosEnvios = enviosSalvos.map(e => {
                 let dataHoraEnvio = e.data_envio;
-                
-                // Tenta formatar para pegar Data e Hora completas
                 if (dataHoraEnvio) {
                     const dateObj = new Date(dataHoraEnvio);
                     if (!isNaN(dateObj) && dataHoraEnvio.includes('T')) {
                         dataHoraEnvio = dateObj.toLocaleString('pt-BR');
                     } else if (dataHoraEnvio.includes('-')) {
-                        // Se for um registro muito antigo apenas com YYYY-MM-DD
                         dataHoraEnvio = dataHoraEnvio.split('-').reverse().join('/');
                     }
                 }
                 
-                // Cruza o nome da peça com o catálogo para descobrir o estoque de origem
                 const pecaCatalogo = pecas.find(p => p.nome === e.peca);
                 const estoqueAfetado = pecaCatalogo && pecaCatalogo.estoqueDestino ? pecaCatalogo.estoqueDestino : 'Lidiane';
                 
@@ -1063,7 +1056,6 @@ if (btnExportarExcel) {
                 };
             });
 
-            // Aba 3: Movimentações do Estoque (Nomes e Termos ajustados)
             const dadosMovimentacoes = movimentacoes.map(m => {
                 let dataHora = m.data_movimento;
                 if (dataHora) {
@@ -1082,7 +1074,6 @@ if (btnExportarExcel) {
                 };
             });
 
-            // Monta o arquivo e as abas
             const workbook = XLSX.utils.book_new();
 
             const worksheetEstoque = XLSX.utils.json_to_sheet(dadosEstoque);
@@ -1092,7 +1083,6 @@ if (btnExportarExcel) {
             XLSX.utils.book_append_sheet(workbook, worksheetEnvios, "Envios p_ Linha");
 
             const worksheetMovimentacoes = XLSX.utils.json_to_sheet(dadosMovimentacoes);
-            // Nome da aba atualizado
             XLSX.utils.book_append_sheet(workbook, worksheetMovimentacoes, "Movimentações do Estoque");
 
             const dataHoje = new Date().toISOString().split('T')[0].split('-').reverse().join('-');
@@ -1106,7 +1096,9 @@ if (btnExportarExcel) {
             btnExportarExcel.disabled = false;
         }
     });
-    // ==========================================
+} // <--- ESSA CHAVE ESTAVA FALTANDO PARA FECHAR O BLOCO DO EXCEL!
+
+// ==========================================
 // LÓGICA DE ABRIR E FECHAR MÓDULOS
 // ==========================================
 window.toggleModulo = function(idConteudo, elementoHeader) {
@@ -1114,33 +1106,29 @@ window.toggleModulo = function(idConteudo, elementoHeader) {
     const icone = elementoHeader.querySelector('.icone-toggle');
 
     if (conteudo.classList.contains('aberto')) {
-        // Se está aberto, fecha
         conteudo.classList.remove('aberto');
         icone.textContent = '+';
     } else {
-        // Se está fechado, abre
         conteudo.classList.add('aberto');
-        icone.textContent = '−'; // Usando o sinal de menos
+        icone.textContent = '−'; 
     }
 };
+
 // ==========================================
 // LÓGICA DO MÓDULO ALMOXARIFADO
 // ==========================================
 const tabelaPais = document.getElementById('tabelaPais');
 const tabelaFilhos = document.getElementById('tabelaFilhos');
 
-// Elementos de Filtro - Pais
 const buscaPais = document.getElementById('buscaPais');
 const filtroDestinoPais = document.getElementById('filtroDestinoPais');
 
-// Elementos de Filtro - Filhos
 const buscaPecaSelect2 = document.getElementById('buscaPecaSelect2');
 const filtroOcultarZeradasAlmoxarifado = document.getElementById('filtroOcultarZeradasAlmoxarifado');
 
 if (tabelaPais || tabelaFilhos) {
     
     // --- 1. GESTÃO DE PALETES PAIS (ESTOQUE BRUTO) ---
-    // (Por enquanto, usando dados locais até criarmos a rota GET no Python para os paletes)
     let estoquePaletesAlmox = [
         { id: 'PAL-001', espessura: 25, largura: 150, comprimento: 3.0, pecas: 800, destino: 'Lidiane' },
         { id: 'PAL-002', espessura: 25, largura: 100, comprimento: 3.0, pecas: 500, destino: 'Mobly' }
@@ -1153,7 +1141,6 @@ if (tabelaPais || tabelaFilhos) {
         const termoBusca = buscaPais ? buscaPais.value.toLowerCase() : '';
         const filtroDestino = filtroDestinoPais ? filtroDestinoPais.value : '';
 
-        // Aplica os filtros (Texto livre + Select2 de Destino)
         const paletesFiltrados = estoquePaletesAlmox.filter(p => {
             if (termoBusca && !p.id.toLowerCase().includes(termoBusca)) return false;
             if (filtroDestino && p.destino !== filtroDestino) return false;
@@ -1181,16 +1168,14 @@ if (tabelaPais || tabelaFilhos) {
         });
     }
 
-    // Escuta quando o usuário digita ou muda o Select2
     if (buscaPais) buscaPais.addEventListener('input', renderizarPais);
     if(typeof $ !== 'undefined' && filtroDestinoPais) {
         $('#filtroDestinoPais').on('change', renderizarPais);
     }
-    renderizarPais(); // Chamada inicial
-
+    renderizarPais(); 
 
     // --- 2. GESTÃO DE PEÇAS CORTADAS (CONECTADO À NUVEM) ---
-    let catalogoAlmoxarifado = []; // Memória temporária da tela
+    let catalogoAlmoxarifado = []; 
 
     async function carregarPecasAlmoxarifado() {
         if (!tabelaFilhos) return;
@@ -1198,7 +1183,6 @@ if (tabelaPais || tabelaFilhos) {
             const response = await fetch('/api/pecas');
             catalogoAlmoxarifado = await response.json();
             
-            // Injeta as peças no Select2 para busca inteligente
             if (buscaPecaSelect2) {
                 buscaPecaSelect2.innerHTML = '<option value="">Todos os itens cadastrados...</option>';
                 catalogoAlmoxarifado.forEach(p => {
@@ -1208,7 +1192,6 @@ if (tabelaPais || tabelaFilhos) {
                     opt.textContent = `${p.id} - ${p.nome} (${dest}) - Saldo: ${p.qtd}`;
                     buscaPecaSelect2.appendChild(opt);
                 });
-                // Avisa o jQuery para redesenhar a caixa
                 if(typeof $ !== 'undefined') $('#buscaPecaSelect2').val(null).trigger('change');
             }
             
@@ -1226,10 +1209,8 @@ if (tabelaPais || tabelaFilhos) {
         const selectValue = buscaPecaSelect2 ? buscaPecaSelect2.value : '';
         const ocultarZeradas = filtroOcultarZeradasAlmoxarifado ? filtroOcultarZeradasAlmoxarifado.checked : false;
 
-        // Processa as duas regras de filtro
         const pecasFiltradas = catalogoAlmoxarifado.filter(peca => {
             if (ocultarZeradas && peca.qtd <= 0) return false;
-            // Se tiver algo selecionado no Select2, mostra SÓ aquela peça
             if (selectValue && peca.id !== selectValue) return false; 
             return true;
         });
@@ -1256,7 +1237,6 @@ if (tabelaPais || tabelaFilhos) {
         });
     }
 
-    // Escuta as mudanças no Select2 e na caixinha de Ocultar Zeradas
     if(typeof $ !== 'undefined' && buscaPecaSelect2) {
         $('#buscaPecaSelect2').on('change', renderizarFilhos);
     }
@@ -1264,8 +1244,9 @@ if (tabelaPais || tabelaFilhos) {
         filtroOcultarZeradasAlmoxarifado.addEventListener('change', renderizarFilhos);
     }
 
-    // Busca as informações na nuvem assim que entra no Almoxarifado
     carregarPecasAlmoxarifado();
 }
+
+if (typeof carregarDropdownLinha === 'function') {
+    carregarDropdownLinha();
 }
-carregarDropdownLinha();
