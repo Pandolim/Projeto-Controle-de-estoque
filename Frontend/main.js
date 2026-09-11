@@ -1,4 +1,26 @@
 // ==========================================
+// INTEGRAÇÃO TEMPO REAL: GOOGLE SHEETS
+// ==========================================
+async function notificarGoogleSheets(aba, linhaDeDados) {
+    // URL ATUALIZADA
+    const url = "https://script.google.com/macros/s/AKfycbziTzqmByTXczTSg2M2dOyyzpOVJRfEt_uzTnvUuRKCn40sUznX2Hhi9L4-3HnP0MYc/exec";
+    try {
+        await fetch(url, {
+            method: 'POST',
+            mode: 'no-cors', // Furando o bloqueio de segurança do navegador
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                tipo: 'linha_unica',
+                aba: aba,
+                dados: linhaDeDados
+            })
+        });
+    } catch (e) {
+        console.error("Falha silenciosa ao notificar a planilha:", e);
+    }
+}
+
+// ==========================================
 // LÓGICA DE LOGIN
 // ==========================================
 const formLogin = document.getElementById('formLogin');
@@ -393,14 +415,14 @@ if (tabelaEstoqueGeral || formCadPeca) {
         });
     }
 }
-    if (formMovEstoque) {
+if (formMovEstoque) {
         formMovEstoque.addEventListener('submit', function(event) {
             event.preventDefault();
             const payload = {
                 id: selectPecaEstoque.value,
                 tipo: document.getElementById('movTipo').value,
                 quantidade: parseInt(document.getElementById('movQtd').value),
-                usuario: localStorage.getItem('usuarioLogado') || 'Não Registrado' // <-- Capturando o usuário!
+                usuario: localStorage.getItem('usuario_logado') || 'Não Registrado'
             };
 
             fetch('/api/pecas/movimentar', {
@@ -412,9 +434,24 @@ if (tabelaEstoqueGeral || formCadPeca) {
             .then(data => {
                 if (data.status === 'sucesso') {
                     alert(`Estoque atualizado com sucesso no banco!`);
+                    
+                    // 👉 O GATILHO ENTRA AQUI, SÓ QUANDO O BANCO CONFIRMAR!
+                    let dataAtual = new Date().toLocaleString('pt-BR');
+                    let usuarioLogado = localStorage.getItem('usuario_logado') || 'Não Registrado';
+                    notificarGoogleSheets("Movimentações do Estoque", [
+                        dataAtual, 
+                        usuarioLogado, 
+                        payload.id, 
+                        payload.tipo === 'entrada' ? 'Entrada no Estoque' : 'Saída do Estoque', 
+                        payload.quantidade, 
+                        "Lidiane/Mobly"
+                    ]);
+
                     formMovEstoque.reset();
                     carregarEstoqueDoBanco();
-                } else alert('Erro: ' + data.erro);
+                } else {
+                    alert('Erro: ' + data.erro);
+                }
             });
         });
     }
@@ -888,6 +925,19 @@ if (formPecaLinha && tabelaPecasNaLinha && filtroDataLinha) {
             
             alert(`✅ Sucesso! ${qtd} unidades de ${nomePeca} enviadas para a linha ${linha}. ${isPedidoExtra ? '(Registrado como Corte Extra)' : ''}`);
             
+let dataEnvio = new Date().toLocaleString('pt-BR');
+let userLogado = localStorage.getItem('usuario_logado') || 'Não Registrado';
+// Segue a ordem das colunas da aba "Envios p_ Linha"
+notificarGoogleSheets("Envios p_ Linha", [
+    dataEnvio, 
+    linha, 
+    nomePeca, 
+    "Lidiane/Mobly", 
+    qtd, 
+    isPedidoExtra ? "Sim" : "Não", 
+    userLogado
+]);
+
             // Atualiza tudo visualmente puxando os novos dados da nuvem
             carregarDropdownLinha();
             carregarEstoqueDoBanco(); 
