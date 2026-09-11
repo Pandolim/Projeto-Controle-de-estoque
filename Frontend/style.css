@@ -291,78 +291,17 @@ select:disabled, input:disabled, button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
-/* ==========================================
-   RESPONSIVIDADE (TABLETS E CELULARES)
-   ========================================== */
 
-/* Regras aplicadas automaticamente em telas menores que 768px (Smartphones e Tablets em pé) */
-@media (max-width: 768px) {
-    
-    /* 1. Ajuste do Cabeçalho */
-    .dashboard-header {
-        flex-direction: column;
-        text-align: center;
-        gap: 15px;
-        padding: 15px;
-    }
-
-    /* 2. Grades empilhadas (Tudo em uma coluna só) */
-    .grid-entradas {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    /* 3. Campos lado a lado agora ficam um embaixo do outro */
-    .input-row {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .input-row .input-group {
-        width: 100%;
-    }
-
-    /* 4. Formulário de Envio para a Linha (Força 100% de largura) */
-    #formPecaLinha {
-        flex-direction: column;
-        align-items: stretch !important;
-    }
-
-    #formPecaLinha .input-group {
-        width: 100% !important;
-        min-width: 100% !important;
-    }
-
-    #formPecaLinha button {
-        width: 100%;
-        margin-top: 10px !important;
-    }
-
-    /* 5. Tabelas Responsivas (Cria uma barra de rolagem horizontal para não quebrar a tela) */
-    .table-card {
-        width: 100%;
-        overflow-x: auto; /* Permite arrastar a tabela para o lado */
-        -webkit-overflow-scrolling: touch; /* Deixa a rolagem suave no celular */
-    }
-
-    .estoque-table {
-        min-width: 700px; /* Impede que o texto fique esmagado, forçando a rolagem */
-    }
-
-    /* 6. Barra de busca e filtros empilhados */
-    #buscaEstoqueGeral {
-        width: 100%;
-        min-width: 100% !important;
-    }
-    /* ==========================================
+/* =========================================
    MÓDULOS EXPANSÍVEIS (ACCORDION)
-   ========================================== */
+   ========================================= */
 .modulo-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #f8f9fa; /* Cinza bem clarinho */
+    gap: 12px;
+    width: 100%;
+    background-color: #f8f9fa;
     padding: 12px 20px;
     border-radius: 6px;
     border: 1px solid #dfe6e9;
@@ -375,14 +314,17 @@ select:disabled, input:disabled, button:disabled {
     background-color: #e9ecef;
 }
 
-.modulo-header h2, 
+.modulo-header h2,
 .modulo-header h3 {
     margin: 0;
     font-size: 1.2rem;
     color: #2c3e50;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .icone-toggle {
+    flex: 0 0 auto;
     font-size: 1.5rem;
     font-weight: bold;
     color: #3498db;
@@ -390,16 +332,195 @@ select:disabled, input:disabled, button:disabled {
 }
 
 .modulo-conteudo {
-    display: none; /* Esconde por padrão */
+    display: none;
+    width: 100%;
+    max-width: 100%;
     padding: 15px;
     border: 1px solid #dfe6e9;
     border-top: none;
     border-radius: 0 0 6px 6px;
     margin-bottom: 20px;
+    overflow-x: hidden;
 }
 
-/* Classe que o JavaScript vai injetar para mostrar o conteúdo */
 .modulo-conteudo.aberto {
     display: block;
 }
+
+/* Elementos internos não devem estourar o módulo */
+.modulo-conteudo img,
+.modulo-conteudo input,
+.modulo-conteudo select,
+.modulo-conteudo textarea,
+.modulo-conteudo button {
+    max-width: 100%;
+}
+
+/* ==========================================
+   RESPONSIVIDADE (TABLETS E CELULARES)
+   ========================================== */
+
+@media (max-width: 768px) {
+
+    /* 1. Cabeçalho */
+    .dashboard-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+        padding: 15px;
+    }
+
+    /* 2. Container principal: reduz o espaço desperdiçado no celular */
+    .dashboard-container {
+        width: 100%;
+        max-width: 100%;
+        padding: 15px 10px;
+        margin: 0;
+    }
+
+    /* 3. Cards */
+    .card {
+        width: 100%;
+        max-width: 100%;
+        padding: 15px;
+        overflow: hidden;
+    }
+
+    /* 4. Grades empilhadas */
+    .grid-entradas {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    /* 5. Campos lado a lado viram uma coluna */
+    .input-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .input-row .input-group {
+        width: 100%;
+    }
+
+    /* 6. Formulário de Envio para a Linha */
+    #formPecaLinha {
+        flex-direction: column;
+        align-items: stretch !important;
+        width: 100%;
+    }
+
+    #formPecaLinha .input-group {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #formPecaLinha button {
+        width: 100%;
+        margin-top: 10px !important;
+    }
+
+    /* 7. Tabelas: rolagem horizontal sem quebrar a página */
+    .table-card {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .estoque-table {
+        min-width: 700px;
+    }
+
+    /* 8. Busca */
+    #buscaEstoqueGeral {
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    /* 9. Abas */
+    .tabs-container {
+        width: 100%;
+        gap: 8px;
+    }
+
+    .tab-btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 10px 12px;
+        text-align: center;
+    }
+
+    /* 10. Accordion no celular */
+    .modulo-header {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .modulo-header h2,
+    .modulo-header h3 {
+        font-size: 1rem;
+        line-height: 1.3;
+    }
+
+    .icone-toggle {
+        font-size: 1.3rem;
+    }
+
+    .modulo-conteudo {
+        padding: 12px 10px;
+        margin-bottom: 12px;
+        overflow-x: hidden;
+    }
+
+    /* Evita que grids internos criem largura maior que a tela */
+    .modulo-conteudo .grid-entradas,
+    .modulo-conteudo .input-row {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Inputs e selects ocupam a largura disponível */
+    .modulo-conteudo input,
+    .modulo-conteudo select,
+    .modulo-conteudo textarea {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+/* Celulares pequenos */
+@media (max-width: 480px) {
+
+    .dashboard-container {
+        padding: 10px 8px;
+    }
+
+    .card {
+        padding: 12px;
+        border-radius: 6px;
+    }
+
+    .card h2 {
+        font-size: 1.15rem;
+    }
+
+    .modulo-header {
+        padding: 10px 12px;
+    }
+
+    .modulo-header h2,
+    .modulo-header h3 {
+        font-size: 0.95rem;
+    }
+
+    .modulo-conteudo {
+        padding: 10px 8px;
+    }
+
+    .tab-btn {
+        width: 100%;
+        flex-basis: 100%;
+    }
 }
